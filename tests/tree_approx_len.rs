@@ -1,3 +1,4 @@
+use lsm_tree::compaction::CompactionOptions;
 use lsm_tree::{get_tmp_folder, AbstractTree, Config, SeqNo, SequenceNumberCounter};
 use test_log::test;
 
@@ -132,7 +133,13 @@ fn tree_approx_len() -> lsm_tree::Result<()> {
     assert!(tree.is_empty(SeqNo::MAX, None)?);
     assert_eq!(tree.approximate_len(), 5);
 
-    tree.major_compact(u64::MAX, 5)?;
+    tree.major_compact(
+        u64::MAX,
+        CompactionOptions {
+            seqno_threshold: 5,
+            ..Default::default()
+        },
+    )?;
 
     // Approximate count converges
     assert_eq!(tree.len(SeqNo::MAX, None)?, 0);
@@ -201,7 +208,13 @@ fn tree_approx_len_blob() -> lsm_tree::Result<()> {
     assert!(tree.is_empty(SeqNo::MAX, None)?);
     assert_eq!(tree.approximate_len(), 5);
 
-    tree.major_compact(u64::MAX, 5)?;
+    tree.major_compact(
+        u64::MAX,
+        CompactionOptions {
+            seqno_threshold: 5,
+            ..Default::default()
+        },
+    )?;
 
     // Approximate count converges
     assert_eq!(tree.len(SeqNo::MAX, None)?, 0);

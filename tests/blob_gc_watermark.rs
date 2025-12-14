@@ -1,3 +1,4 @@
+use lsm_tree::compaction::CompactionOptions;
 use lsm_tree::{
     config::CompressionPolicy, get_tmp_folder, AbstractTree, Config, KvSeparationOptions, SeqNo,
     SequenceNumberCounter,
@@ -65,8 +66,20 @@ fn blob_gc_seqno_watermark() -> lsm_tree::Result<()> {
         b"neptune3".repeat(50),
     );
 
-    tree.major_compact(u64::MAX, 0)?;
-    tree.major_compact(u64::MAX, 0)?;
+    tree.major_compact(
+        u64::MAX,
+        CompactionOptions {
+            seqno_threshold: 0,
+            ..Default::default()
+        },
+    )?;
+    tree.major_compact(
+        u64::MAX,
+        CompactionOptions {
+            seqno_threshold: 0,
+            ..Default::default()
+        },
+    )?;
 
     // IMPORTANT: We cannot drop any blobs yet
     // because the watermark is too low
@@ -87,14 +100,26 @@ fn blob_gc_seqno_watermark() -> lsm_tree::Result<()> {
         b"neptune3".repeat(50),
     );
 
-    tree.major_compact(u64::MAX, 1_000)?;
+    tree.major_compact(
+        u64::MAX,
+        CompactionOptions {
+            seqno_threshold: 1_000,
+            ..Default::default()
+        },
+    )?;
 
     {
         let gc_stats = tree.current_version().gc_stats().clone();
         assert!(!gc_stats.is_empty());
     }
 
-    tree.major_compact(u64::MAX, 1_000)?;
+    tree.major_compact(
+        u64::MAX,
+        CompactionOptions {
+            seqno_threshold: 1_000,
+            ..Default::default()
+        },
+    )?;
 
     {
         let gc_stats = tree.current_version().gc_stats().clone();

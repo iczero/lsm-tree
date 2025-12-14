@@ -3,8 +3,9 @@
 // (found in the LICENSE-* files in the repository)
 
 use crate::{
-    iter_guard::IterGuardImpl, table::Table, version::Version, vlog::BlobFile, AnyTree, BlobTree,
-    Config, Guard, InternalValue, KvPair, Memtable, SeqNo, TableId, Tree, UserKey, UserValue,
+    compaction::CompactionOptions, iter_guard::IterGuardImpl, table::Table, version::Version,
+    vlog::BlobFile, AnyTree, BlobTree, Config, Guard, InternalValue, KvPair, Memtable, SeqNo,
+    TableId, Tree, UserKey, UserValue,
 };
 use std::{
     ops::RangeBounds,
@@ -178,7 +179,7 @@ pub trait AbstractTree {
     /// # Errors
     ///
     /// Will return `Err` if an IO error occurs.
-    fn major_compact(&self, target_size: u64, seqno_threshold: SeqNo) -> crate::Result<()>;
+    fn major_compact(&self, target_size: u64, options: CompactionOptions) -> crate::Result<()>;
 
     /// Returns the disk space used by stale blobs.
     fn stale_blob_bytes(&self) -> u64 {
@@ -248,7 +249,7 @@ pub trait AbstractTree {
     fn compact(
         &self,
         strategy: Arc<dyn crate::compaction::CompactionStrategy>,
-        seqno_threshold: SeqNo,
+        options: CompactionOptions,
     ) -> crate::Result<()>;
 
     /// Returns the next table's ID.

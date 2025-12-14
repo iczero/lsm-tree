@@ -1,3 +1,4 @@
+use lsm_tree::compaction::CompactionOptions;
 use lsm_tree::{
     blob_tree::FragmentationEntry, get_tmp_folder, AbstractTree, KvSeparationOptions, SeqNo,
     SequenceNumberCounter,
@@ -39,7 +40,13 @@ fn blob_tree_recover_gc_stats() -> lsm_tree::Result<()> {
         tree.flush_active_memtable(0)?;
         assert_eq!(2, tree.blob_file_count());
 
-        tree.major_compact(64_000_000, 1_000)?;
+        tree.major_compact(
+            64_000_000,
+            CompactionOptions {
+                seqno_threshold: 1_000,
+                ..Default::default()
+            },
+        )?;
 
         let gc_stats = tree.current_version().gc_stats().clone();
 

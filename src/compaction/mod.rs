@@ -8,6 +8,7 @@ pub(crate) mod fifo;
 pub(crate) mod leveled;
 // pub(crate) mod maintenance;
 pub(crate) mod drop_range;
+pub mod filter;
 mod flavour;
 pub(crate) mod major;
 pub(crate) mod movedown;
@@ -32,6 +33,8 @@ pub use movedown::Strategy as MoveDown;
 #[doc(hidden)]
 pub use pulldown::Strategy as PullDown;
 
+use crate::compaction::filter::CompactionFilter;
+use crate::SeqNo;
 use crate::{
     compaction::state::CompactionState, config::Config, version::Version, HashSet, KvPair, TableId,
 };
@@ -93,4 +96,24 @@ pub trait CompactionStrategy {
 
     /// Decides on what to do based on the current state of the LSM-tree's levels
     fn choose(&self, version: &Version, config: &Config, state: &CompactionState) -> Choice;
+}
+
+/// Options for [`crate::abstract::AbstractTree::compact`].
+// default: seqno 0 and no compaction filter
+#[derive(Default)]
+pub struct CompactionOptions {
+    /// MVCC seqno threshold for garbage collection.
+    pub seqno_threshold: SeqNo,
+    /// The compaction filter to use during this compaction.
+    pub compaction_filter: Option<Box<dyn CompactionFilter>>,
+}
+
+// TODO: do we want this?
+impl From<SeqNo> for CompactionOptions {
+    fn from(value: SeqNo) -> Self {
+        Self {
+            seqno_threshold: value,
+            ..Default::default()
+        }
+    }
 }

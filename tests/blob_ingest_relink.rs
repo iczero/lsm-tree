@@ -1,3 +1,4 @@
+use lsm_tree::compaction::CompactionOptions;
 use lsm_tree::{get_tmp_folder, AbstractTree, KvSeparationOptions, SeqNo, SequenceNumberCounter};
 use test_log::test;
 
@@ -43,7 +44,13 @@ fn blob_tree_ingest_relink() -> lsm_tree::Result<()> {
                 .list_blob_file_references()?,
         );
 
-        tree.major_compact(64_000_000, 1_000)?;
+        tree.major_compact(
+            64_000_000,
+            CompactionOptions {
+                seqno_threshold: 1_000,
+                ..Default::default()
+            },
+        )?;
         assert_eq!(1, tree.table_count());
         assert_eq!(1, tree.blob_file_count());
 

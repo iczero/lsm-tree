@@ -1,3 +1,4 @@
+use lsm_tree::compaction::CompactionOptions;
 use lsm_tree::{get_tmp_folder, AbstractTree, Config, SeqNo, SequenceNumberCounter};
 use test_log::test;
 
@@ -33,7 +34,13 @@ fn tree_sealed_memtable_tombstone_shadowing() -> lsm_tree::Result<()> {
 
     assert!(!tree.contains_key("a", SeqNo::MAX)?);
 
-    tree.major_compact(u64::MAX, 2)?;
+    tree.major_compact(
+        u64::MAX,
+        CompactionOptions {
+            seqno_threshold: 2,
+            ..Default::default()
+        },
+    )?;
 
     assert!(!tree.contains_key("a", SeqNo::MAX)?);
 

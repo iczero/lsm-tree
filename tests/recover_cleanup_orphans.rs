@@ -1,3 +1,4 @@
+use lsm_tree::compaction::CompactionOptions;
 use lsm_tree::{get_tmp_folder, AbstractTree, Config, KvSeparationOptions, SequenceNumberCounter};
 use test_log::test;
 
@@ -17,7 +18,13 @@ fn tree_recovery_cleanup_orphans() -> lsm_tree::Result<()> {
 
         assert!(folder.path().join("tables").join("0").try_exists()?);
 
-        tree.major_compact(u64::MAX, 0)?;
+        tree.major_compact(
+            u64::MAX,
+            CompactionOptions {
+                seqno_threshold: 0,
+                ..Default::default()
+            },
+        )?;
 
         assert!(folder.path().join("tables").join("1").try_exists()?);
     }
@@ -62,11 +69,23 @@ fn tree_recovery_cleanup_orphans_blob() -> lsm_tree::Result<()> {
 
         assert!(folder.path().join("blobs").join("0").try_exists()?);
 
-        tree.major_compact(u64::MAX, 5)?;
+        tree.major_compact(
+            u64::MAX,
+            CompactionOptions {
+                seqno_threshold: 5,
+                ..Default::default()
+            },
+        )?;
 
         assert!(folder.path().join("blobs").join("0").try_exists()?);
 
-        tree.major_compact(u64::MAX, 10)?;
+        tree.major_compact(
+            u64::MAX,
+            CompactionOptions {
+                seqno_threshold: 10,
+                ..Default::default()
+            },
+        )?;
 
         assert!(folder.path().join("blobs").join("1").try_exists()?);
     }

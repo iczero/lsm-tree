@@ -7,7 +7,9 @@ pub mod inner;
 pub mod sealed;
 
 use crate::{
-    compaction::{drop_range::OwnedBounds, state::CompactionState, CompactionStrategy},
+    compaction::{
+        drop_range::OwnedBounds, state::CompactionState, CompactionOptions, CompactionStrategy,
+    },
     config::Config,
     file::CURRENT_VERSION_FILE,
     format_version::FormatVersion,
@@ -211,7 +213,13 @@ impl AbstractTree for Tree {
             .expect("lock is poisoned");
 
         log::info!("Starting drop_range compaction");
-        self.inner_compact(strategy, 0)
+        self.inner_compact(
+            strategy,
+            CompactionOptions {
+                seqno_threshold: 0,
+                ..Default::default()
+            },
+        )
     }
 
     fn clear(&self) -> crate::Result<()> {
@@ -232,7 +240,7 @@ impl AbstractTree for Tree {
     }
 
     #[doc(hidden)]
-    fn major_compact(&self, target_size: u64, seqno_threshold: SeqNo) -> crate::Result<()> {
+    fn major_compact(&self, target_size: u64, options: CompactionOptions) -> crate::Result<()> {
         let strategy = Arc::new(crate::compaction::major::Strategy::new(target_size));
 
         // IMPORTANT: Write lock so we can be the only compaction going on
@@ -244,7 +252,7 @@ impl AbstractTree for Tree {
             .expect("lock is poisoned");
 
         log::info!("Starting major compaction");
-        self.inner_compact(strategy, seqno_threshold)
+        self.inner_compact(strategy, options)
     }
 
     fn l0_run_count(&self) -> usize {
@@ -457,7 +465,7 @@ impl AbstractTree for Tree {
     fn compact(
         &self,
         strategy: Arc<dyn CompactionStrategy>,
-        seqno_threshold: SeqNo,
+        options: CompactionOptions,
     ) -> crate::Result<()> {
         // NOTE: Read lock major compaction lock
         // That way, if a major compaction is running, we cannot proceed
@@ -469,7 +477,7 @@ impl AbstractTree for Tree {
             .read()
             .expect("lock is poisoned");
 
-        self.inner_compact(strategy, seqno_threshold)
+        self.inner_compact(strategy, options)
     }
 
     fn get_next_table_id(&self) -> TableId {
@@ -796,13 +804,13 @@ impl Tree {
     fn inner_compact(
         &self,
         strategy: Arc<dyn CompactionStrategy>,
-        mvcc_gc_watermark: SeqNo,
+        options: CompactionOptions,
     ) -> crate::Result<()> {
         use crate::compaction::worker::{do_compaction, Options};
 
         let mut opts = Options::from_tree(self, strategy);
-        opts.mvcc_gc_watermark = mvcc_gc_watermark;
-
+        opts.mvcc_gc_watermark = options.seqno_threshold;
+        *opts.filter.get_mut().expect("lock is poisoned") = options.compaction_filter;
         do_compaction(&opts)?;
 
         log::debug!("Compaction run over");

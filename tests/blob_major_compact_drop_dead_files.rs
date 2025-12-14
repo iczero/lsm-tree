@@ -1,3 +1,4 @@
+use lsm_tree::compaction::CompactionOptions;
 use lsm_tree::{
     blob_tree::FragmentationEntry, get_tmp_folder, AbstractTree, KvSeparationOptions, SeqNo,
     SequenceNumberCounter,
@@ -59,7 +60,13 @@ fn blob_tree_major_compact_drop_dead_files() -> lsm_tree::Result<()> {
             assert_eq!(&lsm_tree::HashMap::default(), &*gc_stats);
         }
 
-        tree.major_compact(64_000_000, 1_000)?;
+        tree.major_compact(
+            64_000_000,
+            CompactionOptions {
+                seqno_threshold: 1_000,
+                ..Default::default()
+            },
+        )?;
         assert_eq!(1, tree.table_count());
         assert_eq!(5, tree.blob_file_count());
 
@@ -83,7 +90,13 @@ fn blob_tree_major_compact_drop_dead_files() -> lsm_tree::Result<()> {
             );
         }
 
-        tree.major_compact(64_000_000, 1_000)?;
+        tree.major_compact(
+            64_000_000,
+            CompactionOptions {
+                seqno_threshold: 1_000,
+                ..Default::default()
+            },
+        )?;
         assert_eq!(1, tree.table_count());
         assert_eq!(1, tree.blob_file_count());
 

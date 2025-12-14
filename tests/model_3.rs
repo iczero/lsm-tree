@@ -1,5 +1,6 @@
 // Found by model testing
 
+use lsm_tree::compaction::CompactionOptions;
 use lsm_tree::{get_tmp_folder, AbstractTree, KvSeparationOptions, Result, SequenceNumberCounter};
 use std::sync::Arc;
 use test_log::test;
@@ -46,7 +47,13 @@ fn model_3() -> Result<()> {
     tree.insert("d", value, 6);
     tree.insert("e", value, 6);
     tree.flush_active_memtable(15)?;
-    tree.compact(compaction.clone(), 41)?;
+    tree.compact(
+        compaction.clone(),
+        CompactionOptions {
+            seqno_threshold: 41,
+            ..Default::default()
+        },
+    )?;
 
     tree.insert("a", value, 7);
     tree.flush_active_memtable(16)?;
@@ -59,7 +66,13 @@ fn model_3() -> Result<()> {
 
     tree.insert("a", value, 10);
     tree.flush_active_memtable(19)?;
-    tree.compact(compaction.clone(), 19)?;
+    tree.compact(
+        compaction.clone(),
+        CompactionOptions {
+            seqno_threshold: 19,
+            ..Default::default()
+        },
+    )?;
 
     tree.drop_range::<&[u8], _>(..)?;
 

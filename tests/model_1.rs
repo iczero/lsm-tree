@@ -1,5 +1,6 @@
 // Found by model testing
 
+use lsm_tree::compaction::CompactionOptions;
 use lsm_tree::{get_tmp_folder, AbstractTree, Result, SequenceNumberCounter};
 use std::sync::Arc;
 use test_log::test;
@@ -31,7 +32,13 @@ fn model_1() -> Result<()> {
 
     tree.insert(b"c", value, 3);
     tree.flush_active_memtable(0)?;
-    tree.compact(compaction.clone(), 0)?;
+    tree.compact(
+        compaction.clone(),
+        CompactionOptions {
+            seqno_threshold: 0,
+            ..Default::default()
+        },
+    )?;
 
     {
         log::info!(r#"Getting "b""#);

@@ -1,3 +1,4 @@
+use lsm_tree::compaction::CompactionOptions;
 use lsm_tree::{get_tmp_folder, AbstractTree, Config, SeqNo, SequenceNumberCounter};
 use std::sync::Arc;
 use test_log::test;
@@ -18,7 +19,13 @@ fn compaction_readers_grouping() -> lsm_tree::Result<()> {
     tree.flush_active_memtable(0)?;
     assert_eq!(3, tree.len(SeqNo::MAX, None)?);
 
-    tree.compact(Arc::new(lsm_tree::compaction::PullDown(0, 2)), 0)?;
+    tree.compact(
+        Arc::new(lsm_tree::compaction::PullDown(0, 2)),
+        CompactionOptions {
+            seqno_threshold: 0,
+            ..Default::default()
+        },
+    )?;
 
     tree.insert("d".as_bytes(), "abc", seqno.next());
     tree.insert("e".as_bytes(), "abc", seqno.next());
@@ -34,7 +41,13 @@ fn compaction_readers_grouping() -> lsm_tree::Result<()> {
 
     // NOTE: Previously, create_compaction_stream would short circuit
     // breaking this
-    tree.compact(Arc::new(lsm_tree::compaction::PullDown(2, 3)), 0)?;
+    tree.compact(
+        Arc::new(lsm_tree::compaction::PullDown(2, 3)),
+        CompactionOptions {
+            seqno_threshold: 0,
+            ..Default::default()
+        },
+    )?;
 
     assert!(!tree
         .current_version()

@@ -1,4 +1,5 @@
 use super::Strategy;
+use crate::compaction::CompactionOptions;
 use crate::{AbstractTree, Config, SequenceNumberCounter};
 use std::sync::Arc;
 use test_log::test;
@@ -14,7 +15,13 @@ fn leveled_empty_levels() -> crate::Result<()> {
     .open()?;
 
     let strategy = Arc::new(Strategy::default());
-    tree.compact(strategy, 0)?;
+    tree.compact(
+        strategy,
+        CompactionOptions {
+            seqno_threshold: 0,
+            ..Default::default()
+        },
+    )?;
 
     assert_eq!(0, tree.table_count());
     Ok(())
@@ -39,7 +46,13 @@ fn leveled_l0_below_limit() -> crate::Result<()> {
     assert_eq!(3, before);
 
     let strategy = Arc::new(Strategy::default());
-    tree.compact(strategy, 0)?;
+    tree.compact(
+        strategy,
+        CompactionOptions {
+            seqno_threshold: 0,
+            ..Default::default()
+        },
+    )?;
 
     assert_eq!(before, tree.table_count());
 
@@ -67,7 +80,13 @@ fn leveled_l0_reached_limit() -> crate::Result<()> {
     assert_eq!(4, tree.table_count());
 
     let strategy = Arc::new(Strategy::default());
-    tree.compact(strategy, 0)?;
+    tree.compact(
+        strategy,
+        CompactionOptions {
+            seqno_threshold: 0,
+            ..Default::default()
+        },
+    )?;
 
     assert_eq!(1, tree.table_count());
 
@@ -92,7 +111,13 @@ fn leveled_l0_reached_limit_disjoint() -> crate::Result<()> {
     assert_eq!(4, tree.table_count());
 
     let strategy = Arc::new(Strategy::default());
-    tree.compact(strategy, 0)?;
+    tree.compact(
+        strategy,
+        CompactionOptions {
+            seqno_threshold: 0,
+            ..Default::default()
+        },
+    )?;
 
     assert_eq!(4, tree.table_count());
 
@@ -117,7 +142,13 @@ fn leveled_l0_reached_limit_disjoint_l1() -> crate::Result<()> {
     }
 
     let fifo = Arc::new(Strategy::default());
-    tree.compact(fifo, 0)?;
+    tree.compact(
+        fifo,
+        CompactionOptions {
+            seqno_threshold: 0,
+            ..Default::default()
+        },
+    )?;
 
     assert_eq!(1, tree.table_count());
 
@@ -129,7 +160,13 @@ fn leveled_l0_reached_limit_disjoint_l1() -> crate::Result<()> {
     assert_eq!(5, tree.table_count());
 
     let strategy = Arc::new(Strategy::default());
-    tree.compact(strategy, 0)?;
+    tree.compact(
+        strategy,
+        CompactionOptions {
+            seqno_threshold: 0,
+            ..Default::default()
+        },
+    )?;
 
     assert_eq!(5, tree.table_count());
 

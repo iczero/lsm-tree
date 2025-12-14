@@ -118,6 +118,7 @@ pub struct Iter {
 }
 
 impl Iter {
+    #[expect(clippy::too_many_arguments)]
     pub fn new(
         table_id: GlobalTableId,
         global_seqno: SeqNo,
