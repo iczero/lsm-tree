@@ -3,8 +3,8 @@
 use std::path::Path;
 
 use crate::coding::Decode;
+use crate::compaction::stream::StreamFilter;
 use crate::compaction::worker::Options;
-use crate::file::BLOBS_FOLDER;
 use crate::version::Version;
 use crate::vlog::Accessor;
 use crate::{BlobIndirection, InternalValue, Slice};
@@ -98,5 +98,31 @@ impl<'a> ItemAccessor<'a> {
                 unreachable!("tombstones are filtered out before calling filter")
             }
         }
+    }
+}
+
+/// Adapts a [`CompactionFilter`] to a [`StreamFilter`].
+// note: this slightly helps insulate CompactionStream from lifetime spam
+pub(crate) struct StreamFilterAdapter<'a, 'b: 'a> {
+    pub filter: Option<&'a mut (dyn CompactionFilter + 'b)>,
+    pub opts: &'a Options,
+    pub version: &'a Version,
+    pub blobs_folder: &'a Path,
+}
+
+impl<'a, 'b: 'a> StreamFilter for StreamFilterAdapter<'a, 'b> {
+    fn should_remove(&mut self, item: &InternalValue) -> bool {
+        let Some(filter) = self.filter.as_mut() else {
+            return false;
+        };
+        matches!(
+            filter.filter_item(ItemAccessor {
+                item,
+                opts: self.opts,
+                version: self.version,
+                blobs_folder: self.blobs_folder,
+            }),
+            FilterVerdict::Drop,
+        )
     }
 }

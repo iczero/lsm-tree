@@ -6,7 +6,7 @@ use super::{CompactionStrategy, Input as CompactionPayload};
 use crate::{
     blob_tree::FragmentationMap,
     compaction::{
-        filter::{CompactionFilter, FilterVerdict, ItemAccessor},
+        filter::{CompactionFilter, FilterVerdict, ItemAccessor, StreamFilterAdapter},
         flavour::{RelocatingCompaction, StandardCompaction},
         state::CompactionState,
         stream::{CompactionStream, ExpiredKvCallback},
@@ -410,10 +410,24 @@ fn merge_tables(
         .evict_tombstones(is_last_level)
         .zero_seqnos(false);
 
+    let blobs_folder = opts.config.path.join(BLOBS_FOLDER);
+
+    // grab the filter so we can use it mutably
+    #[expect(clippy::expect_used, reason = "lock is expected to not be poisoned")]
+    let mut compaction_filter = {
+        let mut filter_lock = opts.filter.lock().expect("lock is poisoned");
+        filter_lock.take()
+    };
+
+    let mut merge_iter = merge_iter.with_filter(StreamFilterAdapter {
+        filter: compaction_filter.as_deref_mut(),
+        opts,
+        version: &current_super_version.version,
+        blobs_folder: &blobs_folder,
+    });
+
     let table_writer =
         super::flavour::prepare_table_writer(&current_super_version.version, opts, payload)?;
-
-    let blobs_folder = opts.config.path.join(BLOBS_FOLDER);
 
     let start = Instant::now();
 
@@ -479,22 +493,11 @@ fn merge_tables(
     // IMPORTANT: Unlock exclusive compaction lock as we are now doing the actual (CPU-intensive) compaction
     drop(compaction_state);
 
-    // grab the filter so we can use it mutably
-    #[expect(clippy::expect_used, reason = "lock is expected to not be poisoned")]
-    let mut compaction_filter = {
-        let mut filter_lock = opts.filter.lock().expect("lock is poisoned");
-        filter_lock.take()
-    };
-
     hidden_guard(payload, opts, || {
         for (idx, item) in merge_iter.enumerate() {
-            if idx % 1_000_000 == 0 && opts.stop_signal.is_stopped() {
-                log::debug!("Stopping amidst compaction because of stop signal");
-                return Ok(());
-            }
+            let item = item?;
 
-            let mut item = item?;
-
+            /*
             if matches!(
                 filter_item(
                     compaction_filter.as_mut(),
@@ -515,8 +518,14 @@ fn merge_tables(
                 item.key.value_type = ValueType::Tombstone;
                 item.value = Slice::empty();
             }
+            */
 
             compactor.write(item)?;
+
+            if idx % 1_000_000 == 0 && opts.stop_signal.is_stopped() {
+                log::debug!("Stopping amidst compaction because of stop signal");
+                return Ok(());
+            }
         }
 
         Ok(())
@@ -574,30 +583,6 @@ fn merge_tables(
     log::trace!("Compaction successful");
 
     Ok(())
-}
-
-/// Run the compaction filter against an item. Returns whether it should be removed.
-fn filter_item(
-    filter: Option<&mut Box<dyn CompactionFilter>>,
-    opts: &Options,
-    version: &Version,
-    blobs_folder: &Path,
-    item: &InternalValue,
-) -> FilterVerdict {
-    let Some(filter) = filter else {
-        return FilterVerdict::Keep;
-    };
-
-    if item.is_tombstone() {
-        return FilterVerdict::Keep;
-    }
-
-    filter.filter_item(ItemAccessor {
-        item,
-        opts,
-        version,
-        blobs_folder,
-    })
 }
 
 fn drop_tables(

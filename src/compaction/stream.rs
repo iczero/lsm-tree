@@ -2,13 +2,10 @@
 // This source code is licensed under both the Apache 2.0 and MIT License
 // (found in the LICENSE-* files in the repository)
 
-use crate::compaction::filter::FilterVerdict;
 use crate::{InternalValue, SeqNo, UserKey, ValueType};
-use std::iter::{Filter, Peekable};
+use std::iter::Peekable;
 
 type Item = crate::Result<InternalValue>;
-
-pub type StreamFilter<'a> = &'a mut dyn FnMut(&InternalValue) -> bool;
 
 /// A callback that receives all expired KVs
 ///
@@ -18,10 +15,24 @@ pub trait ExpiredKvCallback {
     fn on_expired(&self, kv: &InternalValue);
 }
 
+/// A callback for filtering out KVs from the stream.
+pub trait StreamFilter {
+    fn should_remove(&mut self, item: &InternalValue) -> bool;
+}
+
+/// A [`StreamFilter`] that does not filter anything out.
+pub struct NoFilter;
+
+impl StreamFilter for NoFilter {
+    fn should_remove(&mut self, _item: &InternalValue) -> bool {
+        false
+    }
+}
+
 /// Consumes a stream of KVs and emits a new stream according to GC and tombstone rules
 ///
 /// This iterator is used during flushing & compaction.
-pub struct CompactionStream<'a, I: Iterator<Item = Item>> {
+pub struct CompactionStream<'a, I: Iterator<Item = Item>, F: StreamFilter = NoFilter> {
     /// KV stream
     inner: Peekable<I>,
 
@@ -32,14 +43,14 @@ pub struct CompactionStream<'a, I: Iterator<Item = Item>> {
     expiration_callback: Option<&'a dyn ExpiredKvCallback>,
 
     /// Compaction filter
-    filter: Option<StreamFilter<'a>>,
+    filter: F,
 
     evict_tombstones: bool,
 
     zero_seqnos: bool,
 }
 
-impl<'a, I: Iterator<Item = Item>> CompactionStream<'a, I> {
+impl<I: Iterator<Item = Item>> CompactionStream<'_, I, NoFilter> {
     /// Initializes a new merge iterator
     #[must_use]
     pub fn new(iter: I, gc_seqno_threshold: SeqNo) -> Self {
@@ -49,9 +60,23 @@ impl<'a, I: Iterator<Item = Item>> CompactionStream<'a, I> {
             inner: iter,
             gc_seqno_threshold,
             expiration_callback: None,
-            filter: None,
+            filter: NoFilter,
             evict_tombstones: false,
             zero_seqnos: false,
+        }
+    }
+}
+
+impl<'a, I: Iterator<Item = Item>, F: StreamFilter + 'a> CompactionStream<'a, I, F> {
+    /// Installs a filter into this stream
+    pub fn with_filter<NF: StreamFilter>(self, filter: NF) -> CompactionStream<'a, I, NF> {
+        CompactionStream {
+            inner: self.inner,
+            gc_seqno_threshold: self.gc_seqno_threshold,
+            expiration_callback: self.expiration_callback,
+            filter,
+            evict_tombstones: self.evict_tombstones,
+            zero_seqnos: self.zero_seqnos,
         }
     }
 
@@ -63,12 +88,6 @@ impl<'a, I: Iterator<Item = Item>> CompactionStream<'a, I> {
     /// Installs a callback that receives all expired KVs.
     pub fn with_expiration_callback(mut self, cb: &'a dyn ExpiredKvCallback) -> Self {
         self.expiration_callback = Some(cb);
-        self
-    }
-
-    /// Installs a filter to filter out some KVs.
-    pub fn with_filter(mut self, filter: StreamFilter<'a>) -> Self {
-        self.filter = Some(filter);
         self
     }
 
@@ -106,7 +125,7 @@ impl<'a, I: Iterator<Item = Item>> CompactionStream<'a, I> {
     }
 }
 
-impl<I: Iterator<Item = Item>> Iterator for CompactionStream<'_, I> {
+impl<'a, I: Iterator<Item = Item>, F: StreamFilter + 'a> Iterator for CompactionStream<'a, I, F> {
     type Item = Item;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -115,10 +134,8 @@ impl<I: Iterator<Item = Item>> Iterator for CompactionStream<'_, I> {
 
             let filter_wants_remove = if head.is_tombstone() {
                 false
-            } else if let Some(filter) = self.filter.as_mut() {
-                filter(&head)
             } else {
-                false
+                self.filter.should_remove(&head)
             };
 
             if let Some(peeked) = self.inner.peek() {
