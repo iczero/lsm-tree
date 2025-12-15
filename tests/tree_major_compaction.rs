@@ -21,11 +21,8 @@ fn tree_major_compaction() -> lsm_tree::Result<()> {
 
     tree.major_compact(
         u64::MAX,
-        CompactionOptions {
-            // NOTE: Simulate some time passing
-            seqno_threshold: 1_000,
-            ..Default::default()
-        },
+        // NOTE: Simulate some time passing
+        CompactionOptions::from_seqno(1_000),
     )?;
     assert_eq!(1, tree.table_count());
 
@@ -57,11 +54,8 @@ fn tree_major_compaction() -> lsm_tree::Result<()> {
 
     tree.major_compact(
         u64::MAX,
-        CompactionOptions {
-            // NOTE: Simulate some time passing
-            seqno_threshold: 1_000,
-            ..Default::default()
-        },
+        // NOTE: Simulate some time passing
+        CompactionOptions::from_seqno(1_000),
     )?;
 
     assert_eq!(0, tree.table_count());

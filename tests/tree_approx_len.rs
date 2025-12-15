@@ -133,13 +133,7 @@ fn tree_approx_len() -> lsm_tree::Result<()> {
     assert!(tree.is_empty(SeqNo::MAX, None)?);
     assert_eq!(tree.approximate_len(), 5);
 
-    tree.major_compact(
-        u64::MAX,
-        CompactionOptions {
-            seqno_threshold: 5,
-            ..Default::default()
-        },
-    )?;
+    tree.major_compact(u64::MAX, CompactionOptions::from_seqno(5))?;
 
     // Approximate count converges
     assert_eq!(tree.len(SeqNo::MAX, None)?, 0);
@@ -208,13 +202,7 @@ fn tree_approx_len_blob() -> lsm_tree::Result<()> {
     assert!(tree.is_empty(SeqNo::MAX, None)?);
     assert_eq!(tree.approximate_len(), 5);
 
-    tree.major_compact(
-        u64::MAX,
-        CompactionOptions {
-            seqno_threshold: 5,
-            ..Default::default()
-        },
-    )?;
+    tree.major_compact(u64::MAX, CompactionOptions::from_seqno(5))?;
 
     // Approximate count converges
     assert_eq!(tree.len(SeqNo::MAX, None)?, 0);

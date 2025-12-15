@@ -89,13 +89,7 @@ fn model_4() -> Result<()> {
 
     tree.insert([0, 0, 0, 0, 0, 0, 18, 134], value, 188);
     tree.flush_active_memtable(89)?;
-    tree.compact(
-        compaction.clone(),
-        CompactionOptions {
-            seqno_threshold: 89,
-            ..Default::default()
-        },
-    )?;
+    tree.compact(compaction.clone(), CompactionOptions::from_seqno(89))?;
 
     tree.insert([0], value, 189);
     tree.flush_active_memtable(90)?;
@@ -108,13 +102,7 @@ fn model_4() -> Result<()> {
 
     tree.insert([0], value, 192);
     tree.flush_active_memtable(93)?;
-    tree.compact(
-        compaction.clone(),
-        CompactionOptions {
-            seqno_threshold: 93,
-            ..Default::default()
-        },
-    )?;
+    tree.compact(compaction.clone(), CompactionOptions::from_seqno(93))?;
 
     tree.drop_range::<&[u8], _>(..)?;
 

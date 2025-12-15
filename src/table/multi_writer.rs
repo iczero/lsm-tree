@@ -291,13 +291,7 @@ mod tests {
         assert_eq!(1, tree.table_count());
         assert_eq!(1, tree.len(SeqNo::MAX, None)?);
 
-        tree.major_compact(
-            1_024,
-            CompactionOptions {
-                seqno_threshold: 0,
-                ..Default::default()
-            },
-        )?;
+        tree.major_compact(1_024, CompactionOptions::from_seqno(0))?;
         assert_eq!(1, tree.table_count());
         assert_eq!(1, tree.len(SeqNo::MAX, None)?);
 
@@ -330,13 +324,7 @@ mod tests {
         assert_eq!(1, tree.table_count());
         assert_eq!(3, tree.len(SeqNo::MAX, None)?);
 
-        tree.major_compact(
-            1_024,
-            CompactionOptions {
-                seqno_threshold: 0,
-                ..Default::default()
-            },
-        )?;
+        tree.major_compact(1_024, CompactionOptions::from_seqno(0))?;
         assert_eq!(3, tree.table_count());
         assert_eq!(3, tree.len(SeqNo::MAX, None)?);
 

@@ -21,13 +21,7 @@ fn blob_tree_fifo_limit() -> lsm_tree::Result<()> {
     for _ in 0..100 {
         tree.insert(nanoid::nanoid!(), "$", 0);
         tree.flush_active_memtable(0)?;
-        tree.compact(
-            compaction.clone(),
-            CompactionOptions {
-                seqno_threshold: 0,
-                ..Default::default()
-            },
-        )?;
+        tree.compact(compaction.clone(), CompactionOptions::from_seqno(0))?;
         assert!((0..10).contains(&tree.blob_file_count()));
     }
 

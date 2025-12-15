@@ -110,22 +110,12 @@ pub struct CompactionOptions {
 }
 
 impl CompactionOptions {
-    pub fn new(seqno_threshold: SeqNo) -> Self {
+    /// Construct a new [`CompactionOptions`] with a `seqno_threshold`.
+    #[must_use]
+    pub fn from_seqno(seqno_threshold: SeqNo) -> Self {
         Self {
             seqno_threshold,
             ..Default::default()
         }
     }
 }
-
-// TODO: do we want this?
-/*
-impl From<SeqNo> for CompactionOptions {
-    fn from(value: SeqNo) -> Self {
-        Self {
-            seqno_threshold: value,
-            ..Default::default()
-        }
-    }
-}
-*/

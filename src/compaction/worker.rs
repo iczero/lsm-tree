@@ -711,10 +711,7 @@ mod tests {
 
         tree.compact(
             Arc::new(crate::compaction::Fifo::new(1, None)),
-            CompactionOptions {
-                seqno_threshold: 3,
-                ..Default::default()
-            },
+            CompactionOptions::from_seqno(3),
         )?;
 
         assert_eq!(0, tree.table_count());
@@ -766,13 +763,7 @@ mod tests {
         assert_eq!(1, tree.table_count());
         assert_eq!(1, tree.blob_file_count());
 
-        tree.major_compact(
-            1,
-            CompactionOptions {
-                seqno_threshold: 1_000,
-                ..Default::default()
-            },
-        )?;
+        tree.major_compact(1, CompactionOptions::from_seqno(1_000))?;
         assert_eq!(3, tree.table_count());
         assert_eq!(1, tree.blob_file_count());
         // We now have tables [1, 2, 3] pointing into blob file 0
@@ -796,10 +787,7 @@ mod tests {
         // because table #3 still points into it
         tree.compact(
             Arc::new(InPlaceStrategy(vec![2])),
-            CompactionOptions {
-                seqno_threshold: 1_000,
-                ..Default::default()
-            },
+            CompactionOptions::from_seqno(1_000),
         )?;
         assert_eq!(2, tree.table_count());
         assert_eq!(1, tree.blob_file_count());
@@ -819,10 +807,7 @@ mod tests {
         // Only selecting both for compaction will actually rewrite the file
         tree.compact(
             Arc::new(InPlaceStrategy(vec![3, 4])),
-            CompactionOptions {
-                seqno_threshold: 1_000,
-                ..Default::default()
-            },
+            CompactionOptions::from_seqno(1_000),
         )?;
         assert_eq!(1, tree.table_count());
         assert_eq!(1, tree.blob_file_count());

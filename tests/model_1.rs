@@ -32,13 +32,7 @@ fn model_1() -> Result<()> {
 
     tree.insert(b"c", value, 3);
     tree.flush_active_memtable(0)?;
-    tree.compact(
-        compaction.clone(),
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
-    )?;
+    tree.compact(compaction.clone(), CompactionOptions::from_seqno(0))?;
 
     {
         log::info!(r#"Getting "b""#);

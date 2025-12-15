@@ -19,13 +19,7 @@ fn tree_builds_filters() -> lsm_tree::Result<()> {
     tree.flush_active_memtable(0)?;
     assert!(tree.filter_size() > 0);
 
-    tree.major_compact(
-        u64::MAX,
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
-    )?;
+    tree.major_compact(u64::MAX, CompactionOptions::from_seqno(0))?;
     assert!(tree.filter_size() > 0);
 
     Ok(())
@@ -48,13 +42,7 @@ fn tree_expect_point_read_hits() -> lsm_tree::Result<()> {
     tree.flush_active_memtable(0)?;
     assert!(tree.filter_size() > 0);
 
-    tree.major_compact(
-        u64::MAX,
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
-    )?;
+    tree.major_compact(u64::MAX, CompactionOptions::from_seqno(0))?;
     assert!(tree.filter_size() == 0);
 
     Ok(())

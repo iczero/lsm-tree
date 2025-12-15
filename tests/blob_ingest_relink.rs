@@ -44,13 +44,7 @@ fn blob_tree_ingest_relink() -> lsm_tree::Result<()> {
                 .list_blob_file_references()?,
         );
 
-        tree.major_compact(
-            64_000_000,
-            CompactionOptions {
-                seqno_threshold: 1_000,
-                ..Default::default()
-            },
-        )?;
+        tree.major_compact(64_000_000, CompactionOptions::from_seqno(1_000))?;
         assert_eq!(1, tree.table_count());
         assert_eq!(1, tree.blob_file_count());
 

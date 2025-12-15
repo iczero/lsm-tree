@@ -51,13 +51,7 @@ fn blob_tree_compression() -> lsm_tree::Result<()> {
         assert!(!tree.contains_key("b", SeqNo::MAX)?);
     }
 
-    tree.major_compact(
-        u64::MAX,
-        CompactionOptions {
-            seqno_threshold: 1_000,
-            ..Default::default()
-        },
-    )?;
+    tree.major_compact(u64::MAX, CompactionOptions::from_seqno(1_000))?;
     assert_eq!(1, tree.table_count());
     assert_eq!(1, tree.blob_file_count());
 
@@ -84,13 +78,7 @@ fn blob_tree_compression() -> lsm_tree::Result<()> {
         assert!(!tree.contains_key("b", SeqNo::MAX)?);
     }
 
-    tree.major_compact(
-        u64::MAX,
-        CompactionOptions {
-            seqno_threshold: 1_000,
-            ..Default::default()
-        },
-    )?;
+    tree.major_compact(u64::MAX, CompactionOptions::from_seqno(1_000))?;
     assert_eq!(1, tree.table_count());
     assert_eq!(1, tree.blob_file_count());
 

@@ -213,13 +213,7 @@ impl AbstractTree for Tree {
             .expect("lock is poisoned");
 
         log::info!("Starting drop_range compaction");
-        self.inner_compact(
-            strategy,
-            CompactionOptions {
-                seqno_threshold: 0,
-                ..Default::default()
-            },
-        )
+        self.inner_compact(strategy, CompactionOptions::from_seqno(0))
     }
 
     fn clear(&self) -> crate::Result<()> {

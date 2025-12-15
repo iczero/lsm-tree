@@ -53,13 +53,7 @@ mod tests {
 
         assert_eq!(3, tree.approximate_len());
 
-        tree.major_compact(
-            u64::MAX,
-            CompactionOptions {
-                seqno_threshold: 3,
-                ..Default::default()
-            },
-        )?;
+        tree.major_compact(u64::MAX, CompactionOptions::from_seqno(3))?;
 
         assert_eq!(1, tree.table_count());
 
@@ -82,13 +76,7 @@ mod tests {
         // }
 
         assert!(tree
-            .major_compact(
-                u64::MAX,
-                CompactionOptions {
-                    seqno_threshold: 4,
-                    ..Default::default()
-                }
-            )
+            .major_compact(u64::MAX, CompactionOptions::from_seqno(4))
             .is_err());
 
         assert!(tree

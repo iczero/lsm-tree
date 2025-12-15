@@ -315,10 +315,7 @@ fn disjoint_tree_minmax(c: &mut Criterion) {
     tree.flush_active_memtable(0).unwrap();
     tree.compact(
         Arc::new(lsm_tree::compaction::PullDown(0, 6)),
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
+        CompactionOptions::from_seqno(0),
     )
     .unwrap();
 
@@ -326,10 +323,7 @@ fn disjoint_tree_minmax(c: &mut Criterion) {
     tree.flush_active_memtable(0).unwrap();
     tree.compact(
         Arc::new(lsm_tree::compaction::PullDown(0, 5)),
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
+        CompactionOptions::from_seqno(0),
     )
     .unwrap();
 
@@ -337,10 +331,7 @@ fn disjoint_tree_minmax(c: &mut Criterion) {
     tree.flush_active_memtable(0).unwrap();
     tree.compact(
         Arc::new(lsm_tree::compaction::PullDown(0, 4)),
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
+        CompactionOptions::from_seqno(0),
     )
     .unwrap();
 
@@ -348,10 +339,7 @@ fn disjoint_tree_minmax(c: &mut Criterion) {
     tree.flush_active_memtable(0).unwrap();
     tree.compact(
         Arc::new(lsm_tree::compaction::PullDown(0, 3)),
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
+        CompactionOptions::from_seqno(0),
     )
     .unwrap();
 
@@ -359,10 +347,7 @@ fn disjoint_tree_minmax(c: &mut Criterion) {
     tree.flush_active_memtable(0).unwrap();
     tree.compact(
         Arc::new(lsm_tree::compaction::PullDown(0, 2)),
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
+        CompactionOptions::from_seqno(0),
     )
     .unwrap();
 
@@ -370,10 +355,7 @@ fn disjoint_tree_minmax(c: &mut Criterion) {
     tree.flush_active_memtable(0).unwrap();
     tree.compact(
         Arc::new(lsm_tree::compaction::PullDown(0, 1)),
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
+        CompactionOptions::from_seqno(0),
     )
     .unwrap();
 

@@ -24,37 +24,19 @@ fn model_2() -> Result<()> {
 
     tree.insert("a", value, 3);
     tree.flush_active_memtable(0)?;
-    tree.compact(
-        compaction.clone(),
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
-    )?;
+    tree.compact(compaction.clone(), CompactionOptions::from_seqno(0))?;
     assert_eq!(1, tree.table_count());
     assert_eq!(1, tree.blob_file_count());
 
     tree.insert("b", value, 4);
     tree.flush_active_memtable(0)?;
-    tree.compact(
-        compaction.clone(),
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
-    )?;
+    tree.compact(compaction.clone(), CompactionOptions::from_seqno(0))?;
     assert_eq!(2, tree.table_count());
     assert_eq!(2, tree.blob_file_count());
 
     tree.insert("a", value, 5);
     tree.flush_active_memtable(0)?;
-    tree.compact(
-        compaction.clone(),
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
-    )?;
+    tree.compact(compaction.clone(), CompactionOptions::from_seqno(0))?;
     assert_eq!(3, tree.table_count());
     assert_eq!(3, tree.blob_file_count());
 

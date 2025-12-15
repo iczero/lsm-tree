@@ -36,13 +36,7 @@ fn blob_register_table_rotation() -> lsm_tree::Result<()> {
     tree.insert("e", "e", 0);
 
     tree.flush_active_memtable(0)?;
-    tree.major_compact(
-        1,
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
-    )?;
+    tree.major_compact(1, CompactionOptions::from_seqno(0))?;
 
     assert_eq!(5, tree.table_count());
     assert_eq!(1, tree.blob_file_count());
@@ -98,13 +92,7 @@ fn blob_register_table_rotation_relocation() -> lsm_tree::Result<()> {
     tree.insert("f", "f", 0); // f is not overwritten
 
     tree.flush_active_memtable(0)?;
-    tree.major_compact(
-        1,
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
-    )?;
+    tree.major_compact(1, CompactionOptions::from_seqno(0))?;
 
     tree.insert("a", "a", 1);
     tree.insert("b", "b", 1);
@@ -113,24 +101,12 @@ fn blob_register_table_rotation_relocation() -> lsm_tree::Result<()> {
     tree.insert("e", "e", 1);
 
     tree.flush_active_memtable(0)?;
-    tree.major_compact(
-        1,
-        CompactionOptions {
-            seqno_threshold: 10,
-            ..Default::default()
-        },
-    )?;
+    tree.major_compact(1, CompactionOptions::from_seqno(10))?;
 
     assert_eq!(6, tree.table_count());
     assert_eq!(2, tree.blob_file_count());
 
-    tree.major_compact(
-        1,
-        CompactionOptions {
-            seqno_threshold: 11,
-            ..Default::default()
-        },
-    )?;
+    tree.major_compact(1, CompactionOptions::from_seqno(11))?;
 
     assert_eq!(6, tree.table_count());
     assert_eq!(2, tree.blob_file_count());

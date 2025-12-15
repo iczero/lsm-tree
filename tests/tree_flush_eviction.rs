@@ -78,10 +78,7 @@ fn tree_flush_eviction_3() -> lsm_tree::Result<()> {
     // NOTE: Should evict tombstone because last level
     tree.compact(
         Arc::new(lsm_tree::compaction::PullDown(0, 6)),
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
+        CompactionOptions::from_seqno(0),
     )?;
     assert_eq!(0, tree.table_count());
     assert_eq!(0, tree.len(SeqNo::MAX, None)?);
@@ -127,10 +124,7 @@ fn tree_flush_eviction_4() -> lsm_tree::Result<()> {
     // NOTE: Should evict tombstone because last level
     tree.compact(
         Arc::new(lsm_tree::compaction::PullDown(0, 6)),
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
+        CompactionOptions::from_seqno(0),
     )?;
     assert_eq!(1, tree.table_count());
     assert_eq!(1, tree.len(SeqNo::MAX, None)?);

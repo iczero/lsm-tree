@@ -25,24 +25,12 @@ fn fifo_ttl_no_drop_when_recent_or_disabled() -> lsm_tree::Result<()> {
 
     // TTL enabled but not yet expired
     let fifo_recent = Arc::new(Fifo::new(u64::MAX, Some(15)));
-    tree.compact(
-        fifo_recent,
-        CompactionOptions {
-            seqno_threshold: 2,
-            ..Default::default()
-        },
-    )?;
+    tree.compact(fifo_recent, CompactionOptions::from_seqno(2))?;
     assert_eq!(2, tree.table_count());
 
     // TTL disabled explicitly
     let fifo_disabled = Arc::new(Fifo::new(u64::MAX, None));
-    tree.compact(
-        fifo_disabled,
-        CompactionOptions {
-            seqno_threshold: 2,
-            ..Default::default()
-        },
-    )?;
+    tree.compact(fifo_disabled, CompactionOptions::from_seqno(2))?;
     assert_eq!(2, tree.table_count());
 
     Ok(())
@@ -64,13 +52,7 @@ fn fifo_below_limit_no_drop_standard() -> lsm_tree::Result<()> {
     }
 
     let fifo = Arc::new(Fifo::new(u64::MAX, None));
-    tree.compact(
-        fifo,
-        CompactionOptions {
-            seqno_threshold: 3,
-            ..Default::default()
-        },
-    )?;
+    tree.compact(fifo, CompactionOptions::from_seqno(3))?;
 
     assert_eq!(3, tree.table_count());
 
@@ -99,13 +81,7 @@ fn fifo_limit_considers_blob_bytes() -> lsm_tree::Result<()> {
 
     // Very small limit forces dropping based on (table + blob) size
     let fifo = Arc::new(Fifo::new(10, None));
-    tree.compact(
-        fifo,
-        CompactionOptions {
-            seqno_threshold: 3,
-            ..Default::default()
-        },
-    )?;
+    tree.compact(fifo, CompactionOptions::from_seqno(3))?;
 
     // Should have dropped at least one table due to blob bytes pressure
     assert!(tree.table_count() < before);
@@ -124,13 +100,7 @@ fn fifo_compact_empty_tree_noop() -> lsm_tree::Result<()> {
     .open()?;
 
     let fifo = Arc::new(Fifo::new(1_000_000, Some(1)));
-    tree.compact(
-        fifo,
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
-    )?;
+    tree.compact(fifo, CompactionOptions::from_seqno(0))?;
 
     assert_eq!(0, tree.table_count());
 
@@ -153,22 +123,10 @@ fn fifo_idempotent_when_within_limits() -> lsm_tree::Result<()> {
     }
 
     let fifo = Arc::new(Fifo::new(u64::MAX, None));
-    tree.compact(
-        fifo.clone(),
-        CompactionOptions {
-            seqno_threshold: 3,
-            ..Default::default()
-        },
-    )?;
+    tree.compact(fifo.clone(), CompactionOptions::from_seqno(3))?;
     let after_first = tree.table_count();
 
-    tree.compact(
-        fifo,
-        CompactionOptions {
-            seqno_threshold: 3,
-            ..Default::default()
-        },
-    )?;
+    tree.compact(fifo, CompactionOptions::from_seqno(3))?;
     let after_second = tree.table_count();
 
     assert_eq!(after_first, after_second);

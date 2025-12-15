@@ -21,13 +21,7 @@ fn snapshot_after_compaction_simple() -> lsm_tree::Result<()> {
     assert_eq!(b"b", &*tree.get("a", u64::MAX)?.unwrap());
     assert_eq!(b"a", &*tree.get("a", snapshot_seqno)?.unwrap());
 
-    tree.major_compact(
-        u64::MAX,
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
-    )?;
+    tree.major_compact(u64::MAX, CompactionOptions::from_seqno(0))?;
     assert_eq!(b"b", &*tree.get("a", u64::MAX)?.unwrap());
     assert_eq!(b"a", &*tree.get("a", snapshot_seqno)?.unwrap());
 
@@ -58,13 +52,7 @@ fn snapshot_after_compaction_iters() -> lsm_tree::Result<()> {
     }
 
     tree.flush_active_memtable(0)?;
-    tree.major_compact(
-        u64::MAX,
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
-    )?;
+    tree.major_compact(u64::MAX, CompactionOptions::from_seqno(0))?;
 
     assert_eq!(tree.len(seqno.get(), None)?, ITEM_COUNT);
 

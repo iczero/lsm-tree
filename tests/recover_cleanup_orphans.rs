@@ -18,13 +18,7 @@ fn tree_recovery_cleanup_orphans() -> lsm_tree::Result<()> {
 
         assert!(folder.path().join("tables").join("0").try_exists()?);
 
-        tree.major_compact(
-            u64::MAX,
-            CompactionOptions {
-                seqno_threshold: 0,
-                ..Default::default()
-            },
-        )?;
+        tree.major_compact(u64::MAX, CompactionOptions::from_seqno(0))?;
 
         assert!(folder.path().join("tables").join("1").try_exists()?);
     }
@@ -69,23 +63,11 @@ fn tree_recovery_cleanup_orphans_blob() -> lsm_tree::Result<()> {
 
         assert!(folder.path().join("blobs").join("0").try_exists()?);
 
-        tree.major_compact(
-            u64::MAX,
-            CompactionOptions {
-                seqno_threshold: 5,
-                ..Default::default()
-            },
-        )?;
+        tree.major_compact(u64::MAX, CompactionOptions::from_seqno(5))?;
 
         assert!(folder.path().join("blobs").join("0").try_exists()?);
 
-        tree.major_compact(
-            u64::MAX,
-            CompactionOptions {
-                seqno_threshold: 10,
-                ..Default::default()
-            },
-        )?;
+        tree.major_compact(u64::MAX, CompactionOptions::from_seqno(10))?;
 
         assert!(folder.path().join("blobs").join("1").try_exists()?);
     }

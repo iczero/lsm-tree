@@ -170,13 +170,7 @@ mod tests {
         .open()?;
 
         let fifo = Arc::new(Strategy::new(1, None));
-        tree.compact(
-            fifo,
-            CompactionOptions {
-                seqno_threshold: 0,
-                ..Default::default()
-            },
-        )?;
+        tree.compact(fifo, CompactionOptions::from_seqno(0))?;
 
         assert_eq!(0, tree.table_count());
         Ok(())
@@ -199,13 +193,7 @@ mod tests {
 
         let before = tree.table_count();
         let fifo = Arc::new(Strategy::new(u64::MAX, None));
-        tree.compact(
-            fifo,
-            CompactionOptions {
-                seqno_threshold: 4,
-                ..Default::default()
-            },
-        )?;
+        tree.compact(fifo, CompactionOptions::from_seqno(4))?;
 
         assert_eq!(before, tree.table_count());
         Ok(())
@@ -229,13 +217,7 @@ mod tests {
         let before = tree.table_count();
         // Very small limit forces dropping oldest tables
         let fifo = Arc::new(Strategy::new(1, None));
-        tree.compact(
-            fifo,
-            CompactionOptions {
-                seqno_threshold: 4,
-                ..Default::default()
-            },
-        )?;
+        tree.compact(fifo, CompactionOptions::from_seqno(4))?;
 
         assert!(tree.table_count() < before);
         Ok(())
@@ -259,13 +241,7 @@ mod tests {
 
         let before = tree.table_count();
         let fifo = Arc::new(Strategy::new(1, None));
-        tree.compact(
-            fifo,
-            CompactionOptions {
-                seqno_threshold: 3,
-                ..Default::default()
-            },
-        )?;
+        tree.compact(fifo, CompactionOptions::from_seqno(3))?;
 
         assert!(tree.table_count() < before);
         Ok(())
@@ -297,13 +273,7 @@ mod tests {
         assert_eq!(2, tree.table_count());
 
         let fifo = Arc::new(Strategy::new(u64::MAX, Some(10)));
-        tree.compact(
-            fifo,
-            CompactionOptions {
-                seqno_threshold: 2,
-                ..Default::default()
-            },
-        )?;
+        tree.compact(fifo, CompactionOptions::from_seqno(2))?;
 
         assert_eq!(1, tree.table_count());
 
@@ -333,13 +303,7 @@ mod tests {
 
         // TTL=1s will mark both expired; very small limit ensures size-based collection path is also exercised.
         let fifo = Arc::new(Strategy::new(1, Some(1)));
-        tree.compact(
-            fifo,
-            CompactionOptions {
-                seqno_threshold: 2,
-                ..Default::default()
-            },
-        )?;
+        tree.compact(fifo, CompactionOptions::from_seqno(2))?;
 
         assert_eq!(0, tree.table_count());
 

@@ -1,3 +1,5 @@
+use lsm_tree::compaction::CompactionOptions;
+
 #[test_log::test]
 #[cfg(feature = "metrics")]
 fn tree_filter_hit_rate() -> lsm_tree::Result<()> {
@@ -17,7 +19,7 @@ fn tree_filter_hit_rate() -> lsm_tree::Result<()> {
             tree.insert(k.to_be_bytes(), "abc", seqno.next());
         }
         tree.flush_active_memtable(0)?;
-        tree.major_compact(u64::MAX, 0)?;
+        tree.major_compact(u64::MAX, CompactionOptions::from_seqno(0))?;
 
         for k in 0u64..10_000 {
             tree.get(k.to_be_bytes(), SeqNo::MAX).unwrap().unwrap();
@@ -40,7 +42,7 @@ fn tree_filter_hit_rate() -> lsm_tree::Result<()> {
             tree.insert(k.to_be_bytes(), "abc", seqno.next());
         }
         tree.flush_active_memtable(0)?;
-        tree.major_compact(u64::MAX, 0)?;
+        tree.major_compact(u64::MAX, CompactionOptions::from_seqno(0))?;
 
         for k in 0u64..10_000 {
             tree.get(k.to_be_bytes(), SeqNo::MAX).unwrap().unwrap();

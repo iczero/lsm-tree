@@ -21,10 +21,7 @@ fn compaction_readers_grouping() -> lsm_tree::Result<()> {
 
     tree.compact(
         Arc::new(lsm_tree::compaction::PullDown(0, 2)),
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
+        CompactionOptions::from_seqno(0),
     )?;
 
     tree.insert("d".as_bytes(), "abc", seqno.next());
@@ -43,10 +40,7 @@ fn compaction_readers_grouping() -> lsm_tree::Result<()> {
     // breaking this
     tree.compact(
         Arc::new(lsm_tree::compaction::PullDown(2, 3)),
-        CompactionOptions {
-            seqno_threshold: 0,
-            ..Default::default()
-        },
+        CompactionOptions::from_seqno(0),
     )?;
 
     assert!(!tree
