@@ -2,8 +2,8 @@
 #[cfg(feature = "lz4")]
 fn blob_tree_compression() -> lsm_tree::Result<()> {
     use lsm_tree::{
-        blob_tree::FragmentationEntry, AbstractTree, KvSeparationOptions, SeqNo,
-        SequenceNumberCounter,
+        blob_tree::FragmentationEntry, compaction::CompactionOptions, AbstractTree,
+        KvSeparationOptions, SeqNo, SequenceNumberCounter,
     };
 
     let folder = tempfile::tempdir()?;
@@ -51,7 +51,7 @@ fn blob_tree_compression() -> lsm_tree::Result<()> {
         assert!(!tree.contains_key("b", SeqNo::MAX)?);
     }
 
-    tree.major_compact(u64::MAX, 1_000)?;
+    tree.major_compact(u64::MAX, CompactionOptions::from_seqno(1_000))?;
     assert_eq!(1, tree.table_count());
     assert_eq!(1, tree.blob_file_count());
 
@@ -78,7 +78,7 @@ fn blob_tree_compression() -> lsm_tree::Result<()> {
         assert!(!tree.contains_key("b", SeqNo::MAX)?);
     }
 
-    tree.major_compact(u64::MAX, 1_000)?;
+    tree.major_compact(u64::MAX, CompactionOptions::from_seqno(1_000))?;
     assert_eq!(1, tree.table_count());
     assert_eq!(1, tree.blob_file_count());
 

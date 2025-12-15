@@ -1,3 +1,4 @@
+use lsm_tree::compaction::CompactionOptions;
 use lsm_tree::{get_tmp_folder, AbstractTree, Config, SeqNo, SequenceNumberCounter};
 use test_log::test;
 
@@ -18,7 +19,11 @@ fn tree_major_compaction() -> lsm_tree::Result<()> {
     tree.flush_active_memtable(0)?;
     assert_eq!(1, tree.table_count());
 
-    tree.major_compact(u64::MAX, 1_000 /* NOTE: Simulate some time passing */)?;
+    tree.major_compact(
+        u64::MAX,
+        // NOTE: Simulate some time passing
+        CompactionOptions::from_seqno(1_000),
+    )?;
     assert_eq!(1, tree.table_count());
 
     let item = tree.get_internal_entry(b"a", SeqNo::MAX)?.unwrap();
@@ -47,7 +52,11 @@ fn tree_major_compaction() -> lsm_tree::Result<()> {
     tree.flush_active_memtable(0)?;
     assert_eq!(2, tree.table_count());
 
-    tree.major_compact(u64::MAX, 1_000 /* NOTE: Simulate some time passing */)?;
+    tree.major_compact(
+        u64::MAX,
+        // NOTE: Simulate some time passing
+        CompactionOptions::from_seqno(1_000),
+    )?;
 
     assert_eq!(0, tree.table_count());
     assert_eq!(0, tree.len(SeqNo::MAX, None)?);

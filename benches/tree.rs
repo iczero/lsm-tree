@@ -313,33 +313,51 @@ fn disjoint_tree_minmax(c: &mut Criterion) {
 
     tree.insert("a", "a", 0);
     tree.flush_active_memtable(0).unwrap();
-    tree.compact(Arc::new(lsm_tree::compaction::PullDown(0, 6)), 0)
-        .unwrap();
+    tree.compact(
+        Arc::new(lsm_tree::compaction::PullDown(0, 6)),
+        CompactionOptions::from_seqno(0),
+    )
+    .unwrap();
 
     tree.insert("b", "b", 0);
     tree.flush_active_memtable(0).unwrap();
-    tree.compact(Arc::new(lsm_tree::compaction::PullDown(0, 5)), 0)
-        .unwrap();
+    tree.compact(
+        Arc::new(lsm_tree::compaction::PullDown(0, 5)),
+        CompactionOptions::from_seqno(0),
+    )
+    .unwrap();
 
     tree.insert("c", "c", 0);
     tree.flush_active_memtable(0).unwrap();
-    tree.compact(Arc::new(lsm_tree::compaction::PullDown(0, 4)), 0)
-        .unwrap();
+    tree.compact(
+        Arc::new(lsm_tree::compaction::PullDown(0, 4)),
+        CompactionOptions::from_seqno(0),
+    )
+    .unwrap();
 
     tree.insert("d", "d", 0);
     tree.flush_active_memtable(0).unwrap();
-    tree.compact(Arc::new(lsm_tree::compaction::PullDown(0, 3)), 0)
-        .unwrap();
+    tree.compact(
+        Arc::new(lsm_tree::compaction::PullDown(0, 3)),
+        CompactionOptions::from_seqno(0),
+    )
+    .unwrap();
 
     tree.insert("e", "e", 0);
     tree.flush_active_memtable(0).unwrap();
-    tree.compact(Arc::new(lsm_tree::compaction::PullDown(0, 2)), 0)
-        .unwrap();
+    tree.compact(
+        Arc::new(lsm_tree::compaction::PullDown(0, 2)),
+        CompactionOptions::from_seqno(0),
+    )
+    .unwrap();
 
     tree.insert("f", "f", 0);
     tree.flush_active_memtable(0).unwrap();
-    tree.compact(Arc::new(lsm_tree::compaction::PullDown(0, 1)), 0)
-        .unwrap();
+    tree.compact(
+        Arc::new(lsm_tree::compaction::PullDown(0, 1)),
+        CompactionOptions::from_seqno(0),
+    )
+    .unwrap();
 
     tree.insert("g", "g", 0);
     tree.flush_active_memtable(0).unwrap();

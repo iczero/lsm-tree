@@ -1,3 +1,4 @@
+use lsm_tree::compaction::CompactionOptions;
 use lsm_tree::{get_tmp_folder, AbstractTree, SeqNo, SequenceNumberCounter};
 use std::sync::Arc;
 use test_log::test;
@@ -75,7 +76,10 @@ fn tree_flush_eviction_3() -> lsm_tree::Result<()> {
     assert_eq!(0, tree.len(SeqNo::MAX, None)?);
 
     // NOTE: Should evict tombstone because last level
-    tree.compact(Arc::new(lsm_tree::compaction::PullDown(0, 6)), 0)?;
+    tree.compact(
+        Arc::new(lsm_tree::compaction::PullDown(0, 6)),
+        CompactionOptions::from_seqno(0),
+    )?;
     assert_eq!(0, tree.table_count());
     assert_eq!(0, tree.len(SeqNo::MAX, None)?);
 
@@ -118,7 +122,10 @@ fn tree_flush_eviction_4() -> lsm_tree::Result<()> {
     );
 
     // NOTE: Should evict tombstone because last level
-    tree.compact(Arc::new(lsm_tree::compaction::PullDown(0, 6)), 0)?;
+    tree.compact(
+        Arc::new(lsm_tree::compaction::PullDown(0, 6)),
+        CompactionOptions::from_seqno(0),
+    )?;
     assert_eq!(1, tree.table_count());
     assert_eq!(1, tree.len(SeqNo::MAX, None)?);
     assert_eq!(

@@ -1,3 +1,4 @@
+use lsm_tree::compaction::CompactionOptions;
 use lsm_tree::{get_tmp_folder, AbstractTree, KvSeparationOptions, SequenceNumberCounter};
 use std::sync::Arc;
 use test_log::test;
@@ -20,7 +21,7 @@ fn blob_tree_fifo_limit() -> lsm_tree::Result<()> {
     for _ in 0..100 {
         tree.insert(nanoid::nanoid!(), "$", 0);
         tree.flush_active_memtable(0)?;
-        tree.compact(compaction.clone(), 0)?;
+        tree.compact(compaction.clone(), CompactionOptions::from_seqno(0))?;
         assert!((0..10).contains(&tree.blob_file_count()));
     }
 

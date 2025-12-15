@@ -1,5 +1,6 @@
 // Found by model testing
 
+use lsm_tree::compaction::CompactionOptions;
 use lsm_tree::{
     config::BlockSizePolicy, get_tmp_folder, AbstractTree, KvSeparationOptions, Result,
     SequenceNumberCounter,
@@ -88,7 +89,7 @@ fn model_4() -> Result<()> {
 
     tree.insert([0, 0, 0, 0, 0, 0, 18, 134], value, 188);
     tree.flush_active_memtable(89)?;
-    tree.compact(compaction.clone(), 89)?;
+    tree.compact(compaction.clone(), CompactionOptions::from_seqno(89))?;
 
     tree.insert([0], value, 189);
     tree.flush_active_memtable(90)?;
@@ -101,7 +102,7 @@ fn model_4() -> Result<()> {
 
     tree.insert([0], value, 192);
     tree.flush_active_memtable(93)?;
-    tree.compact(compaction.clone(), 93)?;
+    tree.compact(compaction.clone(), CompactionOptions::from_seqno(93))?;
 
     tree.drop_range::<&[u8], _>(..)?;
 

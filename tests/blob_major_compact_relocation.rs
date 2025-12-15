@@ -1,3 +1,4 @@
+use lsm_tree::compaction::CompactionOptions;
 use lsm_tree::{
     blob_tree::FragmentationEntry, get_tmp_folder, AbstractTree, KvSeparationOptions, SeqNo,
     SequenceNumberCounter,
@@ -52,7 +53,7 @@ fn blob_tree_major_compact_relocation_simple() -> lsm_tree::Result<()> {
         let value = tree.get("smol", SeqNo::MAX)?.expect("should exist");
         assert_eq!(&*value, b"smol");
 
-        tree.major_compact(64_000_000, 1_000)?;
+        tree.major_compact(64_000_000, CompactionOptions::from_seqno(1_000))?;
         assert_eq!(1, tree.table_count());
         assert_eq!(2, tree.blob_file_count());
 
@@ -78,7 +79,7 @@ fn blob_tree_major_compact_relocation_simple() -> lsm_tree::Result<()> {
             );
         }
 
-        tree.major_compact(64_000_000, 1_000)?;
+        tree.major_compact(64_000_000, CompactionOptions::from_seqno(1_000))?;
         assert_eq!(1, tree.table_count());
         assert_eq!(2, tree.blob_file_count());
 
@@ -159,7 +160,7 @@ fn blob_tree_major_compact_relocation_repeated_key() -> lsm_tree::Result<()> {
         let value = tree.get("e", SeqNo::MAX)?.expect("should exist");
         assert_eq!(&*value, big_value);
 
-        tree.major_compact(64_000_000, 1_000)?;
+        tree.major_compact(64_000_000, CompactionOptions::from_seqno(1_000))?;
         assert_eq!(1, tree.table_count());
         assert_eq!(1, tree.blob_file_count());
 
@@ -188,7 +189,7 @@ fn blob_tree_major_compact_relocation_repeated_key() -> lsm_tree::Result<()> {
             );
         }
 
-        tree.major_compact(64_000_000, 1_000)?;
+        tree.major_compact(64_000_000, CompactionOptions::from_seqno(1_000))?;
         assert_eq!(1, tree.table_count());
         assert_eq!(1, tree.blob_file_count());
 
@@ -272,7 +273,7 @@ fn blob_tree_major_compact_relocation_interleaved() -> lsm_tree::Result<()> {
         let value = tree.get("e", SeqNo::MAX)?.expect("should exist");
         assert_eq!(&*value, b"smol");
 
-        tree.major_compact(64_000_000, 1_000)?;
+        tree.major_compact(64_000_000, CompactionOptions::from_seqno(1_000))?;
         assert_eq!(1, tree.table_count());
         assert_eq!(1, tree.blob_file_count());
 
@@ -300,7 +301,7 @@ fn blob_tree_major_compact_relocation_interleaved() -> lsm_tree::Result<()> {
             );
         }
 
-        tree.major_compact(64_000_000, 1_000)?;
+        tree.major_compact(64_000_000, CompactionOptions::from_seqno(1_000))?;
         assert_eq!(1, tree.table_count());
         assert_eq!(1, tree.blob_file_count());
 

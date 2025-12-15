@@ -1,3 +1,4 @@
+use lsm_tree::compaction::CompactionOptions;
 use lsm_tree::{
     blob_tree::FragmentationEntry, get_tmp_folder, AbstractTree, KvSeparationOptions, SeqNo,
     SequenceNumberCounter,
@@ -40,7 +41,7 @@ fn blob_tree_major_compact_gc_stats() -> lsm_tree::Result<()> {
 
         // Blob file has no fragmentation before compaction (in stats)
         // so it is not rewritten
-        tree.major_compact(64_000_000, 1_000)?;
+        tree.major_compact(64_000_000, CompactionOptions::from_seqno(1_000))?;
         assert_eq!(1, tree.table_count());
         assert_eq!(2, tree.blob_file_count());
 
@@ -95,7 +96,7 @@ fn blob_tree_major_compact_gc_stats_2() -> lsm_tree::Result<()> {
 
         // Blob file has no fragmentation before compaction (in stats)
         // so it is not rewritten
-        tree.major_compact(64_000_000, 1_000)?;
+        tree.major_compact(64_000_000, CompactionOptions::from_seqno(1_000))?;
         assert_eq!(1, tree.table_count());
         assert_eq!(1, tree.blob_file_count());
 
@@ -168,7 +169,7 @@ fn blob_tree_major_compact_gc_stats_tombstone() -> lsm_tree::Result<()> {
 
         // Blob file has no fragmentation before compaction (in stats)
         // so it is not rewritten
-        tree.major_compact(64_000_000, 1_000)?;
+        tree.major_compact(64_000_000, CompactionOptions::from_seqno(1_000))?;
         assert_eq!(1, tree.table_count());
         assert_eq!(1, tree.blob_file_count());
 

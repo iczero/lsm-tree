@@ -3,8 +3,7 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
 use lsm_tree::{
-    get_tmp_folder,
-    AbstractTree, KvSeparationOptions, Result, SequenceNumberCounter, config::{BlockSizePolicy, CompressionPolicy}
+    AbstractTree, KvSeparationOptions, Result, SequenceNumberCounter, compaction::CompactionOptions, config::{BlockSizePolicy, CompressionPolicy}, get_tmp_folder
 };
 use std::sync::Arc;
 use test_log::test;
@@ -405,7 +404,7 @@ tree.insert([0, 0, 0, 0, 0, 0, 0, 224], [104, 101, 108, 108, 111, 104, 101, 108,
 tree.insert([0, 0, 0, 0, 0, 0, 1, 152], [104, 101, 108, 108, 111, 104, 101, 108, 108, 111], 171175);
 tree.insert([0, 0, 0, 0, 0, 0, 2, 16], [104, 101, 108, 108, 111, 104, 101, 108, 108, 111], 171180);
 tree.flush_active_memtable(171101)?;
-tree.compact(compaction.clone(), 171101)?;
+tree.compact(compaction.clone(), CompactionOptions::from_seqno(171101))?;
 tree.insert([0, 0, 0, 0, 0, 0, 3, 6], [104, 101, 108, 108, 111, 104, 101, 108, 108, 111], 171201);
 tree.insert([0, 0, 0, 0, 0, 0, 1, 217], [104, 101, 108, 108, 111, 104, 101, 108, 108, 111], 171202);
 tree.insert([0, 0, 0, 0, 0, 0, 3, 80], [104, 101, 108, 108, 111, 104, 101, 108, 108, 111], 171203);
@@ -909,7 +908,7 @@ tree.insert([0, 0, 0, 0, 0, 0, 1, 42], [104, 101, 108, 108, 111, 104, 101, 108, 
 tree.insert([0, 0, 0, 0, 0, 0, 1, 162], [104, 101, 108, 108, 111, 104, 101, 108, 108, 111], 171993);
 tree.insert([0, 0, 0, 0, 0, 0, 1, 208], [104, 101, 108, 108, 111, 104, 101, 108, 108, 111], 171997);
 tree.flush_active_memtable(171901)?;
-tree.compact(compaction.clone(), 171901)?;
+tree.compact(compaction.clone(), CompactionOptions::from_seqno(171901))?;
 
 
 tree.insert([0, 0, 0, 0, 0, 0, 3, 78], [104, 101, 108, 108, 111, 104, 101, 108, 108, 111], 172007);
@@ -1018,7 +1017,7 @@ tree.insert([0, 0, 0, 0, 0, 0, 1, 234], [104, 101, 108, 108, 111, 104, 101, 108,
 tree.insert([0, 0, 0, 0, 0, 0, 1, 196], [104, 101, 108, 108, 111, 104, 101, 108, 108, 111], 172164);
 tree.insert([0, 0, 0, 0, 0, 0, 1, 153], [104, 101, 108, 108, 111, 104, 101, 108, 108, 111], 172167);
 tree.flush_active_memtable(172101)?;
-tree.compact(compaction.clone(), 172101)?;
+tree.compact(compaction.clone(), CompactionOptions::from_seqno(172101))?;
 tree.insert([0, 0, 0, 0, 0, 0, 0, 219], [104, 101, 108, 108, 111, 104, 101, 108, 108, 111], 172222);
 tree.insert([0, 0, 0, 0, 0, 0, 0, 124], [104, 101, 108, 108, 111, 104, 101, 108, 108, 111], 172225);
 tree.insert([0, 0, 0, 0, 0, 0, 2, 192], [104, 101, 108, 108, 111, 104, 101, 108, 108, 111], 172226);
@@ -1278,11 +1277,11 @@ tree.insert([0, 0, 0, 0, 0, 0, 0, 199], [104, 101, 108, 108, 111, 104, 101, 108,
 tree.insert([0, 0, 0, 0, 0, 0, 0, 106], [104, 101, 108, 108, 111, 104, 101, 108, 108, 111], 172786);
 tree.insert([0, 0, 0, 0, 0, 0, 1, 34], [104, 101, 108, 108, 111, 104, 101, 108, 108, 111], 172788);
 tree.flush_active_memtable(172701)?;
-tree.compact(compaction.clone(), 172701)?;
+tree.compact(compaction.clone(), CompactionOptions::from_seqno(172701))?;
 
-tree.compact(compaction.clone(), 172901)?;
+tree.compact(compaction.clone(), CompactionOptions::from_seqno(172901))?;
 
-tree.compact(compaction.clone(), 173101)?;
+tree.compact(compaction.clone(), CompactionOptions::from_seqno(173101))?;
 
     tree.drop_range::<&[u8], _>(..)?;
 

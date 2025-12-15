@@ -28,6 +28,7 @@ impl CompactionState {
 #[cfg(test)]
 #[expect(clippy::expect_used)]
 mod tests {
+    use crate::compaction::CompactionOptions;
     use crate::{AbstractTree, SequenceNumberCounter};
     use test_log::test;
 
@@ -52,7 +53,7 @@ mod tests {
 
         assert_eq!(3, tree.approximate_len());
 
-        tree.major_compact(u64::MAX, 3)?;
+        tree.major_compact(u64::MAX, CompactionOptions::from_seqno(3))?;
 
         assert_eq!(1, tree.table_count());
 
@@ -74,7 +75,9 @@ mod tests {
         //         .folder = "/invaliiid/asd".into();
         // }
 
-        assert!(tree.major_compact(u64::MAX, 4).is_err());
+        assert!(tree
+            .major_compact(u64::MAX, CompactionOptions::from_seqno(4))
+            .is_err());
 
         assert!(tree
             .compaction_state

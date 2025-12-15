@@ -11,6 +11,7 @@ pub use gc::{FragmentationEntry, FragmentationMap};
 
 use crate::{
     coding::Decode,
+    compaction::CompactionOptions,
     file::{fsync_directory, BLOBS_FOLDER},
     iter_guard::{IterGuard, IterGuardImpl},
     r#abstract::{AbstractTree, RangeItem},
@@ -273,8 +274,8 @@ impl AbstractTree for BlobTree {
         self.index.clear()
     }
 
-    fn major_compact(&self, target_size: u64, seqno_threshold: SeqNo) -> crate::Result<()> {
-        self.index.major_compact(target_size, seqno_threshold)
+    fn major_compact(&self, target_size: u64, options: CompactionOptions) -> crate::Result<()> {
+        self.index.major_compact(target_size, options)
     }
 
     fn clear_active_memtable(&self) {
@@ -503,9 +504,9 @@ impl AbstractTree for BlobTree {
     fn compact(
         &self,
         strategy: Arc<dyn crate::compaction::CompactionStrategy>,
-        seqno_threshold: SeqNo,
+        options: CompactionOptions,
     ) -> crate::Result<()> {
-        self.index.compact(strategy, seqno_threshold)
+        self.index.compact(strategy, options)
     }
 
     fn get_next_table_id(&self) -> TableId {

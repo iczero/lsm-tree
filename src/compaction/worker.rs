@@ -620,7 +620,9 @@ fn drop_tables(
 #[cfg(test)]
 mod tests {
     use crate::{
-        compaction::{state::CompactionState, Choice, CompactionStrategy, Input},
+        compaction::{
+            state::CompactionState, Choice, CompactionOptions, CompactionStrategy, Input,
+        },
         config::BlockSizePolicy,
         version::Version,
         AbstractTree, Config, KvSeparationOptions, SequenceNumberCounter, TableId,
@@ -654,7 +656,10 @@ mod tests {
         assert_eq!(3, tree.approximate_len());
         assert_eq!(0, tree.sealed_memtable_count());
 
-        tree.compact(Arc::new(crate::compaction::Fifo::new(1, None)), 3)?;
+        tree.compact(
+            Arc::new(crate::compaction::Fifo::new(1, None)),
+            CompactionOptions::from_seqno(3),
+        )?;
 
         assert_eq!(0, tree.table_count());
 
@@ -705,7 +710,7 @@ mod tests {
         assert_eq!(1, tree.table_count());
         assert_eq!(1, tree.blob_file_count());
 
-        tree.major_compact(1, 1_000)?;
+        tree.major_compact(1, CompactionOptions::from_seqno(1_000))?;
         assert_eq!(3, tree.table_count());
         assert_eq!(1, tree.blob_file_count());
         // We now have tables [1, 2, 3] pointing into blob file 0
@@ -727,7 +732,10 @@ mod tests {
 
         // Even though we are compacting table #2, blob file is not rewritten
         // because table #3 still points into it
-        tree.compact(Arc::new(InPlaceStrategy(vec![2])), 1_000)?;
+        tree.compact(
+            Arc::new(InPlaceStrategy(vec![2])),
+            CompactionOptions::from_seqno(1_000),
+        )?;
         assert_eq!(2, tree.table_count());
         assert_eq!(1, tree.blob_file_count());
 
@@ -744,7 +752,10 @@ mod tests {
 
         // Because tables #3 & #4 both point into the blob file
         // Only selecting both for compaction will actually rewrite the file
-        tree.compact(Arc::new(InPlaceStrategy(vec![3, 4])), 1_000)?;
+        tree.compact(
+            Arc::new(InPlaceStrategy(vec![3, 4])),
+            CompactionOptions::from_seqno(1_000),
+        )?;
         assert_eq!(1, tree.table_count());
         assert_eq!(1, tree.blob_file_count());
 

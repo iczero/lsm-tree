@@ -33,7 +33,8 @@ pub use movedown::Strategy as MoveDown;
 pub use pulldown::Strategy as PullDown;
 
 use crate::{
-    compaction::state::CompactionState, config::Config, version::Version, HashSet, KvPair, TableId,
+    compaction::state::CompactionState, config::Config, version::Version, HashSet, KvPair, SeqNo,
+    TableId,
 };
 
 /// Input for compactor.
@@ -93,4 +94,23 @@ pub trait CompactionStrategy {
 
     /// Decides on what to do based on the current state of the LSM-tree's levels
     fn choose(&self, version: &Version, config: &Config, state: &CompactionState) -> Choice;
+}
+
+/// Options for [`crate::abstract::AbstractTree::compact`].
+#[non_exhaustive]
+#[derive(Default)]
+pub struct CompactionOptions {
+    /// MVCC seqno threshold for garbage collection.
+    pub seqno_threshold: SeqNo,
+}
+
+impl CompactionOptions {
+    /// Construct a new [`CompactionOptions`] with a `seqno_threshold`.
+    #[must_use]
+    pub fn from_seqno(seqno_threshold: SeqNo) -> Self {
+        Self {
+            seqno_threshold,
+            ..Default::default()
+        }
+    }
 }
