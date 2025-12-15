@@ -2,7 +2,7 @@
 // This source code is licensed under both the Apache 2.0 and MIT License
 // (found in the LICENSE-* files in the repository)
 
-use crate::{InternalValue, SeqNo, UserKey, ValueType};
+use crate::{InternalValue, SeqNo, Slice, UserKey, ValueType};
 use std::iter::Peekable;
 
 type Item = crate::Result<InternalValue>;
@@ -11,8 +11,8 @@ type Item = crate::Result<InternalValue>;
 ///
 /// Used for counting blobs that are not referenced anymore because of
 /// vHandles that are being dropped through compaction.
-pub trait ExpiredKvCallback {
-    fn on_expired(&self, kv: &InternalValue);
+pub trait DroppedKvCallback {
+    fn on_dropped(&self, kv: &InternalValue);
 }
 
 /// A callback for filtering out KVs from the stream.
@@ -40,7 +40,7 @@ pub struct CompactionStream<'a, I: Iterator<Item = Item>, F: StreamFilter = NoFi
     gc_seqno_threshold: SeqNo,
 
     /// Event emitter that receives all expired KVs
-    expiration_callback: Option<&'a dyn ExpiredKvCallback>,
+    dropped_callback: Option<&'a dyn DroppedKvCallback>,
 
     /// Compaction filter
     filter: F,
@@ -59,7 +59,7 @@ impl<I: Iterator<Item = Item>> CompactionStream<'_, I, NoFilter> {
         Self {
             inner: iter,
             gc_seqno_threshold,
-            expiration_callback: None,
+            dropped_callback: None,
             filter: NoFilter,
             evict_tombstones: false,
             zero_seqnos: false,
@@ -73,7 +73,7 @@ impl<'a, I: Iterator<Item = Item>, F: StreamFilter + 'a> CompactionStream<'a, I,
         CompactionStream {
             inner: self.inner,
             gc_seqno_threshold: self.gc_seqno_threshold,
-            expiration_callback: self.expiration_callback,
+            dropped_callback: self.dropped_callback,
             filter,
             evict_tombstones: self.evict_tombstones,
             zero_seqnos: self.zero_seqnos,
@@ -86,8 +86,8 @@ impl<'a, I: Iterator<Item = Item>, F: StreamFilter + 'a> CompactionStream<'a, I,
     }
 
     /// Installs a callback that receives all expired KVs.
-    pub fn with_expiration_callback(mut self, cb: &'a dyn ExpiredKvCallback) -> Self {
-        self.expiration_callback = Some(cb);
+    pub fn with_expiration_callback(mut self, cb: &'a dyn DroppedKvCallback) -> Self {
+        self.dropped_callback = Some(cb);
         self
     }
 
@@ -107,8 +107,8 @@ impl<'a, I: Iterator<Item = Item>, F: StreamFilter + 'a> CompactionStream<'a, I,
                     let expired = kv.key.user_key == key;
 
                     if expired {
-                        if let Some(watcher) = &mut self.expiration_callback {
-                            watcher.on_expired(kv);
+                        if let Some(watcher) = &mut self.dropped_callback {
+                            watcher.on_dropped(kv);
                         }
                     }
 
@@ -132,11 +132,15 @@ impl<'a, I: Iterator<Item = Item>, F: StreamFilter + 'a> Iterator for Compaction
         loop {
             let mut head = fail_iter!(self.inner.next()?);
 
-            let filter_wants_remove = if head.is_tombstone() {
-                false
-            } else {
-                self.filter.should_remove(&head)
-            };
+            if !head.is_tombstone() && self.filter.should_remove(&head) {
+                // filter wants to drop this kv, replace with tombstone
+                if let Some(watcher) = &mut self.dropped_callback {
+                    watcher.on_dropped(&head);
+                }
+
+                head.key.value_type = ValueType::Tombstone;
+                head.value = Slice::empty();
+            }
 
             if let Some(peeked) = self.inner.peek() {
                 let Ok(peeked) = peeked else {
@@ -239,8 +243,8 @@ mod tests {
             items: Mutex<Vec<InternalValue>>,
         }
 
-        impl ExpiredKvCallback for MyCallback {
-            fn on_expired(&self, kv: &InternalValue) {
+        impl DroppedKvCallback for MyCallback {
+            fn on_dropped(&self, kv: &InternalValue) {
                 let mut items = self.items.lock().unwrap();
                 items.push(kv.clone());
             }

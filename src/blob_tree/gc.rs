@@ -5,7 +5,7 @@
 use std::sync::Mutex;
 
 use crate::{
-    blob_tree::handle::BlobIndirection, coding::Decode, compaction::stream::ExpiredKvCallback,
+    blob_tree::handle::BlobIndirection, coding::Decode, compaction::stream::DroppedKvCallback,
     version::BlobFileList, vlog::BlobFileId,
 };
 
@@ -134,8 +134,8 @@ impl crate::coding::Decode for FragmentationMap {
     }
 }
 
-impl ExpiredKvCallback for Mutex<FragmentationMap> {
-    fn on_expired(&self, kv: &crate::InternalValue) {
+impl DroppedKvCallback for Mutex<FragmentationMap> {
+    fn on_dropped(&self, kv: &crate::InternalValue) {
         if kv.key.value_type.is_indirection() {
             let mut reader = &kv.value[..];
 

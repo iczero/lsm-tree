@@ -6,10 +6,10 @@ use super::{CompactionStrategy, Input as CompactionPayload};
 use crate::{
     blob_tree::FragmentationMap,
     compaction::{
-        filter::{CompactionFilter, FilterVerdict, ItemAccessor, StreamFilterAdapter},
+        filter::{CompactionFilter, StreamFilterAdapter},
         flavour::{RelocatingCompaction, StandardCompaction},
         state::CompactionState,
-        stream::{CompactionStream, ExpiredKvCallback},
+        stream::CompactionStream,
         Choice,
     },
     file::BLOBS_FOLDER,
@@ -19,11 +19,9 @@ use crate::{
     tree::inner::TreeId,
     version::{SuperVersions, Version},
     vlog::{BlobFileMergeScanner, BlobFileScanner, BlobFileWriter},
-    BlobFile, Config, HashSet, InternalValue, SeqNo, SequenceNumberCounter, Slice, TableId,
-    ValueType,
+    BlobFile, Config, HashSet, InternalValue, SeqNo, SequenceNumberCounter, TableId,
 };
 use std::{
-    path::Path,
     sync::{Arc, Mutex, MutexGuard, RwLock, RwLockReadGuard},
     time::Instant,
 };
@@ -496,29 +494,6 @@ fn merge_tables(
     hidden_guard(payload, opts, || {
         for (idx, item) in merge_iter.enumerate() {
             let item = item?;
-
-            /*
-            if matches!(
-                filter_item(
-                    compaction_filter.as_mut(),
-                    opts,
-                    &current_super_version.version,
-                    &blobs_folder,
-                    &item,
-                ),
-                FilterVerdict::Drop,
-            ) {
-                frag_map_cb.on_expired(&item);
-
-                if is_last_level {
-                    continue;
-                }
-
-                // if not last level, convert the value to a tombstone
-                item.key.value_type = ValueType::Tombstone;
-                item.value = Slice::empty();
-            }
-            */
 
             compactor.write(item)?;
 
