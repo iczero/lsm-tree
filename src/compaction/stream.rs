@@ -12,7 +12,7 @@ type Item = crate::Result<InternalValue>;
 /// Used for counting blobs that are not referenced anymore because of
 /// vHandles that are being dropped through compaction.
 pub trait DroppedKvCallback {
-    fn on_dropped(&self, kv: &InternalValue);
+    fn on_dropped(&mut self, kv: &InternalValue);
 }
 
 /// A callback for filtering out KVs from the stream.
@@ -40,7 +40,7 @@ pub struct CompactionStream<'a, I: Iterator<Item = Item>, F: StreamFilter = NoFi
     gc_seqno_threshold: SeqNo,
 
     /// Event emitter that receives all expired KVs
-    dropped_callback: Option<&'a dyn DroppedKvCallback>,
+    dropped_callback: Option<&'a mut dyn DroppedKvCallback>,
 
     /// Compaction filter
     filter: F,
@@ -86,7 +86,7 @@ impl<'a, I: Iterator<Item = Item>, F: StreamFilter + 'a> CompactionStream<'a, I,
     }
 
     /// Installs a callback that receives all expired KVs.
-    pub fn with_expiration_callback(mut self, cb: &'a dyn DroppedKvCallback) -> Self {
+    pub fn with_expiration_callback(mut self, cb: &'a mut dyn DroppedKvCallback) -> Self {
         self.dropped_callback = Some(cb);
         self
     }
@@ -240,13 +240,12 @@ mod tests {
     fn compaction_stream_expired_callback_1() -> crate::Result<()> {
         #[derive(Default)]
         struct MyCallback {
-            items: Mutex<Vec<InternalValue>>,
+            items: Vec<InternalValue>,
         }
 
         impl DroppedKvCallback for MyCallback {
-            fn on_dropped(&self, kv: &InternalValue) {
-                let mut items = self.items.lock().unwrap();
-                items.push(kv.clone());
+            fn on_dropped(&mut self, kv: &InternalValue) {
+                self.items.push(kv.clone());
             }
         }
 
@@ -257,10 +256,10 @@ mod tests {
           "a", "", "T",
         ];
 
-        let my_watcher = MyCallback::default();
+        let mut my_watcher = MyCallback::default();
 
         let iter = vec.iter().cloned().map(Ok);
-        let mut iter = CompactionStream::new(iter, 1_000).with_expiration_callback(&my_watcher);
+        let mut iter = CompactionStream::new(iter, 1_000).with_expiration_callback(&mut my_watcher);
 
         assert_eq!(
             InternalValue::from_components(*b"a", *b"", 999, ValueType::Tombstone),
@@ -273,7 +272,7 @@ mod tests {
                 InternalValue::from_components("a", "", 998, ValueType::Value),
                 InternalValue::from_components("a", "", 997, ValueType::Value),
             ],
-            &*my_watcher.items.into_inner().unwrap(),
+            &*my_watcher.items,
         );
 
         Ok(())

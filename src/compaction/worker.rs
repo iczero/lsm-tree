@@ -383,7 +383,7 @@ fn merge_tables(
         return Ok(());
     };
 
-    let frag_map_cb = Mutex::new(FragmentationMap::default());
+    let mut blob_frag_map = FragmentationMap::default();
 
     let Some(mut merge_iter) = create_compaction_stream(
         &current_super_version.version,
@@ -431,7 +431,7 @@ fn merge_tables(
 
     let mut compactor = match &opts.config.kv_separation_opts {
         Some(blob_opts) => {
-            merge_iter = merge_iter.with_expiration_callback(&frag_map_cb);
+            merge_iter = merge_iter.with_expiration_callback(&mut blob_frag_map);
 
             let blob_files_to_rewrite = pick_blob_files_to_rewrite(
                 &payload.table_ids,
@@ -520,8 +520,6 @@ fn merge_tables(
     let mut version_history_lock = opts.version_history.write().expect("lock is poisoned");
     log::trace!("Acquired super version write lock");
 
-    #[expect(clippy::expect_used, reason = "lock is expected to not be poisoned")]
-    let blob_frag_map = frag_map_cb.into_inner().expect("lock is poisoned");
     log::trace!("Blob fragmentation diff: {blob_frag_map:#?}");
 
     compactor
