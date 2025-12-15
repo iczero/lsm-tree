@@ -8,6 +8,7 @@ pub(crate) mod fifo;
 pub(crate) mod leveled;
 // pub(crate) mod maintenance;
 pub(crate) mod drop_range;
+pub mod filter;
 mod flavour;
 pub(crate) mod major;
 pub(crate) mod movedown;
@@ -33,8 +34,10 @@ pub use movedown::Strategy as MoveDown;
 pub use pulldown::Strategy as PullDown;
 
 use crate::{
-    compaction::state::CompactionState, config::Config, version::Version, HashSet, KvPair, SeqNo,
-    TableId,
+    compaction::{filter::CompactionFilter, state::CompactionState},
+    config::Config,
+    version::Version,
+    HashSet, KvPair, SeqNo, TableId,
 };
 
 /// Input for compactor.
@@ -102,6 +105,8 @@ pub trait CompactionStrategy {
 pub struct CompactionOptions {
     /// MVCC seqno threshold for garbage collection.
     pub seqno_threshold: SeqNo,
+    /// The compaction filter to use during this compaction.
+    pub compaction_filter: Option<Box<dyn CompactionFilter>>,
 }
 
 impl CompactionOptions {

@@ -804,6 +804,7 @@ impl Tree {
 
         let mut opts = Options::from_tree(self, strategy);
         opts.mvcc_gc_watermark = options.seqno_threshold;
+        *opts.filter.lock().expect("lock is poisoned") = options.compaction_filter;
         do_compaction(&opts)?;
 
         log::debug!("Compaction run over");
