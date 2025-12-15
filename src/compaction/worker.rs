@@ -6,7 +6,7 @@ use super::{CompactionStrategy, Input as CompactionPayload};
 use crate::{
     blob_tree::FragmentationMap,
     compaction::{
-        filter::{CompactionFilter, ItemAccessor},
+        filter::{CompactionFilter, FilterVerdict, ItemAccessor},
         flavour::{RelocatingCompaction, StandardCompaction},
         state::CompactionState,
         stream::{CompactionStream, ExpiredKvCallback},
@@ -19,9 +19,11 @@ use crate::{
     tree::inner::TreeId,
     version::{SuperVersions, Version},
     vlog::{BlobFileMergeScanner, BlobFileScanner, BlobFileWriter},
-    BlobFile, Config, HashSet, InternalValue, SeqNo, SequenceNumberCounter, TableId,
+    BlobFile, Config, HashSet, InternalValue, SeqNo, SequenceNumberCounter, Slice, TableId,
+    ValueType,
 };
 use std::{
+    path::Path,
     sync::{Arc, Mutex, MutexGuard, RwLock, RwLockReadGuard},
     time::Instant,
 };
@@ -411,6 +413,8 @@ fn merge_tables(
     let table_writer =
         super::flavour::prepare_table_writer(&current_super_version.version, opts, payload)?;
 
+    let blobs_folder = opts.config.path.join(BLOBS_FOLDER);
+
     let start = Instant::now();
 
     let mut compactor = match &opts.config.kv_separation_opts {
@@ -444,12 +448,10 @@ fn merge_tables(
                         .collect::<crate::Result<Vec<_>>>()?,
                 );
 
-                let writer = BlobFileWriter::new(
-                    opts.blob_file_id_generator.clone(),
-                    opts.config.path.join(BLOBS_FOLDER),
-                )?
-                .use_target_size(blob_opts.file_target_size)
-                .use_passthrough_compression(blob_opts.compression);
+                let writer =
+                    BlobFileWriter::new(opts.blob_file_id_generator.clone(), &blobs_folder)?
+                        .use_target_size(blob_opts.file_target_size)
+                        .use_passthrough_compression(blob_opts.compression);
 
                 let inner = StandardCompaction::new(table_writer, tables);
 
@@ -486,26 +488,35 @@ fn merge_tables(
 
     hidden_guard(payload, opts, || {
         for (idx, item) in merge_iter.enumerate() {
-            let item = item?;
-
-            if filter_item(
-                compaction_filter.as_mut(),
-                opts,
-                &current_super_version.version,
-                &item,
-            ) {
-                // compaction filter wants the item gone
-                frag_map_cb.on_expired(&item);
-                // TODO: tombstone or remove
-                todo!();
-            }
-
-            compactor.write(item)?;
-
             if idx % 1_000_000 == 0 && opts.stop_signal.is_stopped() {
                 log::debug!("Stopping amidst compaction because of stop signal");
                 return Ok(());
             }
+
+            let mut item = item?;
+
+            if matches!(
+                filter_item(
+                    compaction_filter.as_mut(),
+                    opts,
+                    &current_super_version.version,
+                    &blobs_folder,
+                    &item,
+                ),
+                FilterVerdict::Drop,
+            ) {
+                frag_map_cb.on_expired(&item);
+
+                if is_last_level {
+                    continue;
+                }
+
+                // if not last level, convert the value to a tombstone
+                item.key.value_type = ValueType::Tombstone;
+                item.value = Slice::empty();
+            }
+
+            compactor.write(item)?;
         }
 
         Ok(())
@@ -525,6 +536,7 @@ fn merge_tables(
     let mut version_history_lock = opts.version_history.write().expect("lock is poisoned");
     log::trace!("Acquired super version write lock");
 
+    #[expect(clippy::expect_used, reason = "lock is expected to not be poisoned")]
     let blob_frag_map = frag_map_cb.into_inner().expect("lock is poisoned");
     log::trace!("Blob fragmentation diff: {blob_frag_map:#?}");
 
@@ -564,25 +576,27 @@ fn merge_tables(
     Ok(())
 }
 
-/// Run the compaction filter against an item
+/// Run the compaction filter against an item. Returns whether it should be removed.
 fn filter_item(
     filter: Option<&mut Box<dyn CompactionFilter>>,
     opts: &Options,
     version: &Version,
+    blobs_folder: &Path,
     item: &InternalValue,
-) -> bool {
+) -> FilterVerdict {
     let Some(filter) = filter else {
-        return false;
+        return FilterVerdict::Keep;
     };
 
     if item.is_tombstone() {
-        return false;
+        return FilterVerdict::Keep;
     }
 
-    filter.should_keep(ItemAccessor {
+    filter.filter_item(ItemAccessor {
         item,
         opts,
         version,
+        blobs_folder,
     })
 }
 

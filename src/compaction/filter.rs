@@ -1,9 +1,21 @@
 //! Compaction filters
 
+use std::path::Path;
+
 use crate::coding::Decode;
 use crate::compaction::worker::Options;
+use crate::file::BLOBS_FOLDER;
 use crate::version::Version;
+use crate::vlog::Accessor;
 use crate::{BlobIndirection, InternalValue, Slice};
+
+/// Verdict returned by a [`CompactionFilter`].
+pub enum FilterVerdict {
+    /// Keep the item.
+    Keep,
+    /// Delete the item.
+    Drop,
+}
 
 /// Trait for compaction filter objects.
 pub trait CompactionFilter {
@@ -11,7 +23,7 @@ pub trait CompactionFilter {
     /// Returns whether an item should be kept during compaction.
     /* TODO: perhaps prevented by super versions? check this
     ///
-    /// ## Warning!
+    /// # Warning!
     ///
     /// Compaction filters ignore transactions. Any item filtered out (deleted)
     /// by a compaction filter will immediately stop existing for all readers,
@@ -20,7 +32,11 @@ pub trait CompactionFilter {
     // note: for rocksdb behavior, see
     // <https://github.com/facebook/rocksdb/wiki/Compaction-Filter>
      */
-    fn should_keep(&mut self, item: ItemAccessor<'_>) -> bool;
+    ///
+    /// # Errors
+    ///
+    /// If the filter errors, it should return [`FilterVerdict::Keep`].
+    fn filter_item(&mut self, item: ItemAccessor<'_>) -> FilterVerdict;
 }
 
 /// Accessor for the key/value from a compaction filter.
@@ -28,7 +44,9 @@ pub struct ItemAccessor<'a> {
     pub(crate) item: &'a InternalValue,
     pub(crate) opts: &'a Options,
     pub(crate) version: &'a Version,
+    pub(crate) blobs_folder: &'a Path,
 }
+
 impl<'a> ItemAccessor<'a> {
     /// Get the key of this item
     #[must_use]
@@ -51,20 +69,30 @@ impl<'a> ItemAccessor<'a> {
         match self.item.key.value_type {
             crate::ValueType::Value => Ok(self.item.value.clone()),
             crate::ValueType::Tombstone => {
+                // resolve and read the value from a blob
                 let mut reader = &self.item.value[..];
                 let indirection = BlobIndirection::decode_from(&mut reader)?;
                 let vhandle = indirection.vhandle;
+                let accessor = Accessor::new(&self.version.blob_files);
 
-                if let Some(value) = self
-                    .opts
-                    .config
-                    .cache
-                    .get_blob(vhandle.blob_file_id, &vhandle)
-                {
-                    return Ok(value);
+                let value = accessor.get(
+                    self.opts.tree_id,
+                    self.blobs_folder,
+                    &self.item.key.user_key,
+                    &vhandle,
+                    &self.opts.config.cache,
+                    &self.opts.config.descriptor_table,
+                )?;
+
+                if let Some(value) = value {
+                    Ok(value)
+                } else {
+                    log::error!(
+                        "failed to read referenced blob file during execution of compaction filter. key: {:?}, vptr: {:?}",
+                        self.item.key, indirection
+                    );
+                    Err(crate::Error::Unrecoverable)
                 }
-
-                todo!();
             }
             crate::ValueType::WeakTombstone | crate::ValueType::Indirection => {
                 unreachable!("tombstones are filtered out before calling filter")

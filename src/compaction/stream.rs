@@ -2,10 +2,13 @@
 // This source code is licensed under both the Apache 2.0 and MIT License
 // (found in the LICENSE-* files in the repository)
 
+use crate::compaction::filter::FilterVerdict;
 use crate::{InternalValue, SeqNo, UserKey, ValueType};
-use std::iter::Peekable;
+use std::iter::{Filter, Peekable};
 
 type Item = crate::Result<InternalValue>;
+
+pub type StreamFilter<'a> = &'a mut dyn FnMut(&InternalValue) -> bool;
 
 /// A callback that receives all expired KVs
 ///
@@ -28,6 +31,9 @@ pub struct CompactionStream<'a, I: Iterator<Item = Item>> {
     /// Event emitter that receives all expired KVs
     expiration_callback: Option<&'a dyn ExpiredKvCallback>,
 
+    /// Compaction filter
+    filter: Option<StreamFilter<'a>>,
+
     evict_tombstones: bool,
 
     zero_seqnos: bool,
@@ -43,6 +49,7 @@ impl<'a, I: Iterator<Item = Item>> CompactionStream<'a, I> {
             inner: iter,
             gc_seqno_threshold,
             expiration_callback: None,
+            filter: None,
             evict_tombstones: false,
             zero_seqnos: false,
         }
@@ -56,6 +63,12 @@ impl<'a, I: Iterator<Item = Item>> CompactionStream<'a, I> {
     /// Installs a callback that receives all expired KVs.
     pub fn with_expiration_callback(mut self, cb: &'a dyn ExpiredKvCallback) -> Self {
         self.expiration_callback = Some(cb);
+        self
+    }
+
+    /// Installs a filter to filter out some KVs.
+    pub fn with_filter(mut self, filter: StreamFilter<'a>) -> Self {
+        self.filter = Some(filter);
         self
     }
 
@@ -99,6 +112,14 @@ impl<I: Iterator<Item = Item>> Iterator for CompactionStream<'_, I> {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             let mut head = fail_iter!(self.inner.next()?);
+
+            let filter_wants_remove = if head.is_tombstone() {
+                false
+            } else if let Some(filter) = self.filter.as_mut() {
+                filter(&head)
+            } else {
+                false
+            };
 
             if let Some(peeked) = self.inner.peek() {
                 let Ok(peeked) = peeked else {
