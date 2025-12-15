@@ -6,10 +6,10 @@ use super::{CompactionStrategy, Input as CompactionPayload};
 use crate::{
     blob_tree::FragmentationMap,
     compaction::{
-        filter::CompactionFilter,
+        filter::{CompactionFilter, ItemAccessor},
         flavour::{RelocatingCompaction, StandardCompaction},
         state::CompactionState,
-        stream::CompactionStream,
+        stream::{CompactionStream, ExpiredKvCallback},
         Choice,
     },
     file::BLOBS_FOLDER,
@@ -383,7 +383,7 @@ fn merge_tables(
         return Ok(());
     };
 
-    let mut blob_frag_map = FragmentationMap::default();
+    let frag_map_cb = Mutex::new(FragmentationMap::default());
 
     let Some(mut merge_iter) = create_compaction_stream(
         &current_super_version.version,
@@ -415,7 +415,7 @@ fn merge_tables(
 
     let mut compactor = match &opts.config.kv_separation_opts {
         Some(blob_opts) => {
-            merge_iter = merge_iter.with_expiration_callback(&mut blob_frag_map);
+            merge_iter = merge_iter.with_expiration_callback(&frag_map_cb);
 
             let blob_files_to_rewrite = pick_blob_files_to_rewrite(
                 &payload.table_ids,
@@ -477,7 +477,7 @@ fn merge_tables(
     // IMPORTANT: Unlock exclusive compaction lock as we are now doing the actual (CPU-intensive) compaction
     drop(compaction_state);
 
-    // grab the filter so we can use it
+    // grab the filter so we can use it mutably
     #[expect(clippy::expect_used, reason = "lock is expected to not be poisoned")]
     let mut compaction_filter = {
         let mut filter_lock = opts.filter.lock().expect("lock is poisoned");
@@ -488,7 +488,15 @@ fn merge_tables(
         for (idx, item) in merge_iter.enumerate() {
             let item = item?;
 
-            if let Some(filter) = &mut compaction_filter {
+            if filter_item(
+                compaction_filter.as_mut(),
+                opts,
+                &current_super_version.version,
+                &item,
+            ) {
+                // compaction filter wants the item gone
+                frag_map_cb.on_expired(&item);
+                // TODO: tombstone or remove
                 todo!();
             }
 
@@ -517,6 +525,7 @@ fn merge_tables(
     let mut version_history_lock = opts.version_history.write().expect("lock is poisoned");
     log::trace!("Acquired super version write lock");
 
+    let blob_frag_map = frag_map_cb.into_inner().expect("lock is poisoned");
     log::trace!("Blob fragmentation diff: {blob_frag_map:#?}");
 
     compactor
@@ -553,6 +562,28 @@ fn merge_tables(
     log::trace!("Compaction successful");
 
     Ok(())
+}
+
+/// Run the compaction filter against an item
+fn filter_item(
+    filter: Option<&mut Box<dyn CompactionFilter>>,
+    opts: &Options,
+    version: &Version,
+    item: &InternalValue,
+) -> bool {
+    let Some(filter) = filter else {
+        return false;
+    };
+
+    if item.is_tombstone() {
+        return false;
+    }
+
+    filter.should_keep(ItemAccessor {
+        item,
+        opts,
+        version,
+    })
 }
 
 fn drop_tables(

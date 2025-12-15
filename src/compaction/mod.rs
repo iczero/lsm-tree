@@ -100,6 +100,7 @@ pub trait CompactionStrategy {
 
 /// Options for [`crate::abstract::AbstractTree::compact`].
 // default: seqno 0 and no compaction filter
+#[non_exhaustive]
 #[derive(Default)]
 pub struct CompactionOptions {
     /// MVCC seqno threshold for garbage collection.
@@ -108,7 +109,17 @@ pub struct CompactionOptions {
     pub compaction_filter: Option<Box<dyn CompactionFilter>>,
 }
 
+impl CompactionOptions {
+    pub fn new(seqno_threshold: SeqNo) -> Self {
+        Self {
+            seqno_threshold,
+            ..Default::default()
+        }
+    }
+}
+
 // TODO: do we want this?
+/*
 impl From<SeqNo> for CompactionOptions {
     fn from(value: SeqNo) -> Self {
         Self {
@@ -117,3 +128,4 @@ impl From<SeqNo> for CompactionOptions {
         }
     }
 }
+*/

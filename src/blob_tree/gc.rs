@@ -2,6 +2,8 @@
 // This source code is licensed under both the Apache 2.0 and MIT License
 // (found in the LICENSE-* files in the repository)
 
+use std::sync::Mutex;
+
 use crate::{
     blob_tree::handle::BlobIndirection, coding::Decode, compaction::stream::ExpiredKvCallback,
     version::BlobFileList, vlog::BlobFileId,
@@ -132,8 +134,8 @@ impl crate::coding::Decode for FragmentationMap {
     }
 }
 
-impl ExpiredKvCallback for FragmentationMap {
-    fn on_expired(&mut self, kv: &crate::InternalValue) {
+impl ExpiredKvCallback for Mutex<FragmentationMap> {
+    fn on_expired(&self, kv: &crate::InternalValue) {
         if kv.key.value_type.is_indirection() {
             let mut reader = &kv.value[..];
 
@@ -147,8 +149,8 @@ impl ExpiredKvCallback for FragmentationMap {
             let size = u64::from(vptr.size);
             let on_disk_size = u64::from(vptr.vhandle.on_disk_size);
 
-            self.0
-                .entry(vptr.vhandle.blob_file_id)
+            let mut map = self.lock().expect("lock is poisoned");
+            map.entry(vptr.vhandle.blob_file_id)
                 .and_modify(|counter| {
                     counter.len += 1;
                     counter.bytes += size;
@@ -275,10 +277,10 @@ mod tests {
             }.encode_into_vec(), 0, ValueType::Indirection),
         ];
 
-        let mut my_watcher = FragmentationMap::default();
+        let watcher = Mutex::new(FragmentationMap::default());
 
         let iter = vec.iter().cloned().map(Ok);
-        let mut iter = CompactionStream::new(iter, 1_000).with_expiration_callback(&mut my_watcher);
+        let mut iter = CompactionStream::new(iter, 1_000).with_expiration_callback(&watcher);
 
         assert_eq!(
             // TODO: Seqno is normally reset to 0
@@ -299,7 +301,7 @@ mod tests {
                 );
                 map
             },
-            my_watcher.0,
+            watcher.into_inner().unwrap().0,
         );
 
         Ok(())
