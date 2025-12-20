@@ -118,4 +118,16 @@ impl CompactionOptions {
             ..Default::default()
         }
     }
+
+    /// Set `seqno_threshold`.
+    pub fn with_seqno_threshold(mut self, seqno_threshold: SeqNo) -> Self {
+        self.seqno_threshold = seqno_threshold;
+        self
+    }
+
+    /// Set `compaction_filter`.
+    pub fn with_compaction_filter(mut self, filter: Option<Box<dyn CompactionFilter>>) -> Self {
+        self.compaction_filter = filter;
+        self
+    }
 }
